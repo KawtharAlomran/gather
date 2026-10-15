@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/TimePreference.dart';
+import 'package:gather/Pages/place_voting_screen.dart';
 
 class GatheringDetailsScreen extends StatelessWidget {
   const GatheringDetailsScreen({super.key});
@@ -17,24 +18,24 @@ class GatheringDetailsScreen extends StatelessWidget {
           },
         ),
       ),
-      bottomNavigationBar: const AppBottomNav(
-        selectedIndex: 1,
-      ),
+      bottomNavigationBar: const AppBottomNav(selectedIndex: 1),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
               'Gathering Details Screen',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/place-voting');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PlaceVotingScreen(),
+                  ),
+                );
               },
               child: const Text('Place Voting'),
             ),
@@ -43,9 +44,7 @@ class GatheringDetailsScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const TimePreferencePage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const TimePreferencePage()),
                 );
               },
               child: const Text('Set preferences'),
