@@ -4,6 +4,8 @@ import 'Pages/login_screen.dart';
 
 import 'package:gather/Pages/profile_screen.dart';
 
+import 'package:gather/Pages/InvitationPage.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -17,7 +19,10 @@ class MyApp extends StatelessWidget {
       title: 'Gather App',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const LoginPage(),
-      routes: {'/profile': (context) => const ProfileScreen()},
+      routes: {
+        '/profile': (context) => const ProfileScreen(),
+        '/invitations': (context) => const InvitationPage(),
+      },
     );
   }
 }

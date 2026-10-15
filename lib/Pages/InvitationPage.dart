@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gather/Pages/app_bottom_nav.dart';
 
 class InvitationPage extends StatelessWidget {
   const InvitationPage({super.key});
@@ -23,6 +24,13 @@ class InvitationPage extends StatelessWidget {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                
+              },
+              child: const Text('Go back'),
             ),
           ],
         ),
