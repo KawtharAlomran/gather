@@ -3,7 +3,9 @@ import 'NotificationPage.dart';
 import 'profile_screen.dart';
 import 'create_gathering_screen.dart'; 
 import 'app_bottom_nav.dart';
-import 'gathering_details_screen.dart'; 
+import 'gathering_details_screen.dart';
+import 'invitee_gather_details_screen.dart'; 
+
 
 
 class HomePage extends StatelessWidget {
@@ -60,13 +62,13 @@ class HomePage extends StatelessWidget {
             ),
 
             const SizedBox(height: 20),
-            
+
              ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const GatheringDetailsScreen(),
+                    builder: (context) => const InviteeGatherDetails(),
                   ),
                 );
               },

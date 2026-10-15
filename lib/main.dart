@@ -7,6 +7,7 @@ import 'package:gather/Pages/place_voting_screen.dart';
 import 'package:gather/Pages/gathering_details_screen.dart';
 
 import 'package:gather/Pages/InvitationPage.dart';
+import 'package:gather/Pages/home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/invitations': (context) => const InvitationPage(),
         '/place-voting': (context) => const PlaceVotingScreen(),
         '/gathering-details': (context) => const GatheringDetailsScreen(),
+        '/home': (context) => const HomePage(),
       },
     );
   }
