@@ -34,14 +34,14 @@ class LoginPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             OutlinedButton(
-              onPressed: () {() {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SignUpPage(),
-                  ),
-                );
-              };},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SignUpPage(),
+                ),
+              );
+            },
               child: const Text('Sign Up'),
             ),
             const SizedBox(height: 12),
