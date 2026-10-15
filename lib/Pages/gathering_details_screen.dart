@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
+import 'package:gather/Pages/TimePreference.dart';
 
 class GatheringDetailsScreen extends StatelessWidget {
   const GatheringDetailsScreen({super.key});
@@ -36,6 +37,18 @@ class GatheringDetailsScreen extends StatelessWidget {
                 Navigator.pushNamed(context, '/place-voting');
               },
               child: const Text('Place Voting'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TimePreferencePage(),
+                  ),
+                );
+              },
+              child: const Text('Set preferences'),
             ),
           ],
         ),
