@@ -45,18 +45,6 @@ class LoginPage extends StatelessWidget {
             },
               child: const Text('Sign Up'),
             ),
-            const SizedBox(height: 12),
-OutlinedButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const InviteeGatherDetails(),
-      ),
-    );
-  },
-  child: const Text('Test'),
-),
           ],
         ),
       ),
