@@ -8,7 +8,7 @@ class TimePreferencePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Gathering'),
+        title: const Text('Time Preference'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
@@ -35,7 +35,7 @@ class TimePreferencePage extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Continue'),
+              child: const Text('Next'),
             ),
           ],
         ),
