@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
+import 'package:gather/Pages/home_page.dart';
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
 
@@ -10,7 +11,14 @@ class NotificationPage extends StatelessWidget {
         title: const Text('Notifications'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HomePage(),
+                  ),
+                );
+              },
         ),
       ),
       bottomNavigationBar: const AppBottomNav(
@@ -30,9 +38,11 @@ class NotificationPage extends StatelessWidget {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                Navigator.popUntil(
+                Navigator.pushReplacement(
                   context,
-                  (route) => route.isFirst,
+                  MaterialPageRoute(
+                    builder: (_) => const HomePage(),
+                  ),
                 );
               },
               child: const Text('Back Home'),

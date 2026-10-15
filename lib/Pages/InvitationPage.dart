@@ -12,7 +12,14 @@ class InvitationPage extends StatelessWidget {
         title: const Text('Invitations'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HomePage(),
+                  ),
+                );
+              },
         ),
       ),
       bottomNavigationBar: const AppBottomNav(
