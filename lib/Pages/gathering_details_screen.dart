@@ -3,6 +3,7 @@ import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/TimePreference.dart';
 import 'package:gather/Pages/place_voting_screen.dart';
 
+
 class GatheringDetailsScreen extends StatelessWidget {
   const GatheringDetailsScreen({super.key});
 
