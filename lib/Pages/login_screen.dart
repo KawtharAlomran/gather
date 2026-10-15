@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/invitee_gather_details_screen.dart';
 import 'signup_page.dart';
+import 'home_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -26,7 +27,7 @@ class LoginPage extends StatelessWidget {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const AppBottomNav(selectedIndex: 1),
+                    builder: (_) =>  HomePage(),
                   ),
                 );
               },
