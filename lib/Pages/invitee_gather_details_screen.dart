@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_bottom_nav.dart';
+import 'package:gather/Pages/place_voting_screen.dart';
 
 class InviteeGatherDetails extends StatelessWidget {
   const InviteeGatherDetails({super.key});
@@ -28,9 +29,13 @@ class InviteeGatherDetails extends StatelessWidget {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
-              child: const Text('Submit'),
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const PlaceVotingScreen(),
+    ),
+  );              },
+              child: const Text('Next'),
             ),
           ],
         ),
