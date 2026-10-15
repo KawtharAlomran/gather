@@ -5,6 +5,8 @@ import 'Pages/login_screen.dart';
 import 'package:gather/Pages/profile_screen.dart';
 import 'package:gather/Pages/friends_screen.dart';
 import 'package:gather/Pages/language_screen.dart';
+import 'package:gather/Pages/place_voting_screen.dart';
+import 'package:gather/Pages/gathering_details_screen.dart';
 
 import 'package:gather/Pages/InvitationPage.dart';
 
@@ -26,6 +28,8 @@ class MyApp extends StatelessWidget {
         '/friends': (context) => const FriendsScreen(),
         '/language': (context) => const LanguageScreen(),
         '/invitations': (context) => const InvitationPage(),
+        '/place-voting': (context) => const PlaceVotingScreen(),
+        '/gathering-details': (context) => const GatheringDetailsScreen(),
       },
     );
   }
