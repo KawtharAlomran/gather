@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
-//Test
-import 'package:gather/Pages/CreateGatheringPage.dart';
-import 'package:gather/Pages/InviteeGatherDetails.dart';
+import 'package:gather/Pages/invitee_gather_details_screen.dart';
+
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 

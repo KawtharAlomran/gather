@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'Pages/LoginPage.dart';
+import 'Pages/login_screen.dart';
 
 
 void main() {
@@ -17,24 +17,6 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: const LoginPage(),
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
-      body: const Center(
-        child: Text('Welcome to the Gather App!'),
-      ),
     );
   }
 }
