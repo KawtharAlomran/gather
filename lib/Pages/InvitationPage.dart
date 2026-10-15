@@ -21,19 +21,14 @@ class InvitationPage extends StatelessWidget {
           children: [
             const Text(
               'Invitations',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 24), 
+            const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const TimePreferencePage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const TimePreferencePage()),
                 );
               },
               child: const Text('Go to Time Preference'),
