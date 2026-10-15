@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
-import 'package:gather/Pages/invitee_gather_details_screen.dart';
 import 'signup_page.dart';
 import 'home_page.dart';
 

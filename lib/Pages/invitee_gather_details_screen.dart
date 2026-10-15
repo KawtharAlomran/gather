@@ -12,7 +12,7 @@ class InviteeGatherDetails extends StatelessWidget {
         title: const Text('Invitee Gathering Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () => Navigator.pop(context)
         ),
       ),
       body: Center(
