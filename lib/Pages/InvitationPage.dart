@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
+import 'package:gather/Pages/TimePreference.dart';
 
 class InvitationPage extends StatelessWidget {
   const InvitationPage({super.key});
@@ -24,6 +25,18 @@ class InvitationPage extends StatelessWidget {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
+            ),
+            const SizedBox(height: 24), 
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TimePreferencePage(),
+                  ),
+                );
+              },
+              child: const Text('Go to Time Preference'),
             ),
           ],
         ),

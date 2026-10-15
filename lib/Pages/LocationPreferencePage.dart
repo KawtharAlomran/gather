@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
 
-class TimePreferencePage extends StatelessWidget {
-  const TimePreferencePage({super.key});
+class LocationPreferencePage extends StatelessWidget {
+  const LocationPreferencePage({super.key});
 
   @override
   Widget build(BuildContext context) {

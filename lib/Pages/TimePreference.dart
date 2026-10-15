@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
+import 'package:gather/Pages/LocationPreferencePage.dart';
 
 class TimePreferencePage extends StatelessWidget {
   const TimePreferencePage({super.key});
@@ -31,7 +31,7 @@ class TimePreferencePage extends StatelessWidget {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const AppBottomNav(selectedIndex: 1),
+                    builder: (_) => const LocationPreferencePage(),
                   ),
                 );
               },
