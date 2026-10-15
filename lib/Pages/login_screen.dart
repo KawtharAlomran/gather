@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/invitee_gather_details_screen.dart';
+import 'signup_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -33,11 +34,14 @@ class LoginPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             OutlinedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sign up tapped')),
+              onPressed: () {() {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SignUpPage(),
+                  ),
                 );
-              },
+              };},
               child: const Text('Sign Up'),
             ),
             const SizedBox(height: 12),
