@@ -25,13 +25,6 @@ class InvitationPage extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                
-              },
-              child: const Text('Go back'),
-            ),
           ],
         ),
       ),
