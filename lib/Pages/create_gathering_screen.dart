@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
+import 'package:gather/Pages/TimePreference.dart';
 
 class CreateGathering extends StatelessWidget {
   const CreateGathering({super.key});
@@ -12,7 +13,8 @@ class CreateGathering extends StatelessWidget {
         title: const Text('Create Gathering'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () => Navigator.pop(context)
+,
         ),
       ),
       body: Center(
@@ -28,9 +30,14 @@ class CreateGathering extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
+         onPressed: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => TimePreferencePage(),
+    ),
+  );
+},
               child: const Text('Create'),
             ),
           ],
