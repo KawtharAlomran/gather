@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'Pages/login_screen.dart';
 
 import 'package:gather/Pages/profile_screen.dart';
+import 'package:gather/Pages/friends_screen.dart';
+import 'package:gather/Pages/language_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +19,10 @@ class MyApp extends StatelessWidget {
       title: 'Gather App',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const LoginPage(),
-      routes: {'/profile': (context) => const ProfileScreen()},
+      routes: {
+        '/profile': (context) => const ProfileScreen(),
+        '/friends': (context) => const FriendsScreen(),
+        '/language': (context) => const LanguageScreen(),},
     );
   }
 }
