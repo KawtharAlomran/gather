@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:gather/Pages/app_bottom_nav.dart';
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
 
@@ -10,8 +10,11 @@ class NotificationPage extends StatelessWidget {
         title: const Text('Notifications'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
+      ),
+      bottomNavigationBar: const AppBottomNav(
+        selectedIndex: 1,
       ),
       body: Center(
         child: Column(

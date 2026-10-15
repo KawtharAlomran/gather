@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
+import 'package:gather/Pages/home_page.dart';
 
 class LocationPreferencePage extends StatelessWidget {
   const LocationPreferencePage({super.key});
@@ -13,6 +14,10 @@ class LocationPreferencePage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
+      ),
+      
+      bottomNavigationBar: const AppBottomNav(
+        selectedIndex: 1,
       ),
       body: Center(
         child: Column(
@@ -31,7 +36,7 @@ class LocationPreferencePage extends StatelessWidget {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const AppBottomNav(selectedIndex: 1),
+                    builder: (_) => const HomePage(),
                   ),
                 );
               },

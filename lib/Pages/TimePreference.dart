@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/LocationPreferencePage.dart';
+import 'package:gather/Pages/app_bottom_nav.dart';
 
 class TimePreferencePage extends StatelessWidget {
   const TimePreferencePage({super.key});
@@ -13,6 +14,9 @@ class TimePreferencePage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
+      ),
+      bottomNavigationBar: const AppBottomNav(
+        selectedIndex: 1,
       ),
       body: Center(
         child: Column(

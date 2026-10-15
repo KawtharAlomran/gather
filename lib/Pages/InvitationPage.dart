@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
-import 'package:gather/Pages/TimePreference.dart';
+import 'package:gather/Pages/home_page.dart';
 
 class InvitationPage extends StatelessWidget {
   const InvitationPage({super.key});
@@ -12,8 +12,11 @@ class InvitationPage extends StatelessWidget {
         title: const Text('Invitations'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
+      ),
+      bottomNavigationBar: const AppBottomNav(
+        selectedIndex: 0,
       ),
       body: Center(
         child: Column(
@@ -28,10 +31,10 @@ class InvitationPage extends StatelessWidget {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const TimePreferencePage()),
+                  MaterialPageRoute(builder: (_) => const HomePage()),
                 );
               },
-              child: const Text('Go to Time Preference'),
+              child: const Text('Go back'),
             ),
           ],
         ),
