@@ -1,0 +1,61 @@
+import 'package:flutter/material.dart';
+import 'package:gather/Pages/app_bottom_nav.dart';
+//Test
+import 'package:gather/Pages/CreateGatheringPage.dart';
+import 'package:gather/Pages/InviteeGatherDetails.dart';
+class LoginPage extends StatelessWidget {
+  const LoginPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Login',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AppBottomNav(selectedIndex: 1),
+                  ),
+                );
+              },
+              child: const Text('Login'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sign up tapped')),
+                );
+              },
+              child: const Text('Sign Up'),
+            ),
+            const SizedBox(height: 12),
+OutlinedButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const InviteeGatherDetails(),
+      ),
+    );
+  },
+  child: const Text('Test'),
+),
+          ],
+        ),
+      ),
+    );
+  }
+}
