@@ -67,11 +67,8 @@ README.md
 1. Clone the repository:
 git clone https://github.com/KawtharAlomran/gather.git
 
-2. Open the project folder:
-cd gather
-
-3. Install the dependencies:
+2. Install the dependencies:
 flutter pub get
 
-4. Run the application:
+3. Run the application:
 flutter run
