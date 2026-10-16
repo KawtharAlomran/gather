@@ -23,11 +23,12 @@ Planning a group gathering can be difficult because people may have different sc
 
 ## Data Model and Data Source
 
-The application includes three main data models:
+The application includes four main data models:
 
-- `UserModel`: Stores user information such as name, and email.
-- `GatheringModel`: Stores gathering information such as id, title, creator email, and participants.
-- `PlaceModel`: Stores information about suggested or selected places.
+- `User`: Stores user information such as name, and email.
+- `Gathering`: Stores gathering information such as id, title, creator email, and participants.
+- `Place`: Stores information about suggested or selected places.
+- `Vote`: Stores a user's vote for a specific gathering option.
 
 ## Project Structure
 
@@ -37,7 +38,8 @@ lib/
 ├── models/
 │   ├── gathering_model.dart
 │   ├── place_model.dart
-│   └── user_model.dart
+│   ├── user_model.dart
+│   └── vote_model.dart
 └── Pages/
     ├── app_bottom_nav.dart
     ├── create_gathering_screen.dart
