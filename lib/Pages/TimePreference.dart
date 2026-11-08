@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:gather/Pages/LocationPreferencePage.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/gathering_details_screen.dart';
+import 'package:gather/shared_widgets/app_button.dart';
+import 'package:gather/shared_widgets/app_text_field.dart';
+import 'package:gather/shared_widgets/app_search_field.dart';
 
 class TimePreferencePage extends StatelessWidget {
   const TimePreferencePage({super.key});
@@ -49,6 +52,24 @@ class TimePreferencePage extends StatelessWidget {
               },
               child: const Text('Next'),
             ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AppTextField(
+                  label: 'Preferred Time',
+                  hintText: 'Enter your preferred time',
+                ),
+                AppSearchField(
+                  hintText: 'Search for a time',
+                ),
+                AppButton(
+                  text: 'Submit',
+                  onPressed: () {
+                    // Handle submit action
+                  },
+                ),
+              ],
+            )
           ],
         ),
       ),
