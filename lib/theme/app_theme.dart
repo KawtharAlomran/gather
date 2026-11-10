@@ -4,6 +4,7 @@ class AppTheme {
   // Gather colors
   static const Color primaryColor = Color(0xFFFF725E);
   static const Color backgroundColor = Color(0xFFFAF7F2);
+  static const Color surfaceColor = Color(0xFFFFFFFF);
   static const Color secondaryColor = Color(0xFF55B6B2);
   static const Color successColor = Color(0xFFD7F3E3);
   static const Color textColor = Color(0xFF242424);
@@ -14,7 +15,7 @@ class AppTheme {
     colorScheme: const ColorScheme.light(
       primary: primaryColor,
       secondary: secondaryColor,
-      surface: backgroundColor,
+      surface: surfaceColor,
       onSurface: textColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
