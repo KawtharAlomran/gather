@@ -71,3 +71,32 @@ class AppMessage extends StatelessWidget {
     );
   }
 }
+// Example 1: Success message (default)
+//
+// AppMessage(
+//   message: 'Invitation accepted successfully!',
+// ),
+//
+// Example 2: Error message
+//
+// AppMessage(
+//   message: 'Something went wrong. Please try again.',
+//   type: MessageType.error,
+// ),
+//
+// Example 3: Message with close button
+//
+// AppMessage(
+//   message: 'Gathering created successfully!',
+//   onClose: () {
+//     // Hide the message.
+//   },
+// ),
+//
+// Notes:
+// - The default message type is success.
+// - Supports success and error messages.
+// - Colors and text styles are taken from the app theme.
+// - The icon changes automatically based on the message type.
+// - The close button is optional.
+// - The message content can be customized for each screen.
