@@ -8,7 +8,7 @@ import 'package:gather/Pages/gathering_details_screen.dart';
 
 import 'package:gather/Pages/InvitationPage.dart';
 import 'package:gather/Pages/home_page.dart';
-
+import 'theme/app_theme.dart';
 void main() {
   runApp(const MyApp());
 }
@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Gather App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: AppTheme.lightTheme,
       home: const LoginPage(),
       routes: {
         '/profile': (context) => const ProfileScreen(),
