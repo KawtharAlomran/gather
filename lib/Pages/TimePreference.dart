@@ -53,7 +53,7 @@ class TimePreferencePage extends StatelessWidget {
               spacing: 16,
               children: [
                 SizedBox(
-                  width: 150,
+                  width: 400,
                   child: AppTextField(
                     label: 'Preferred Time',
                     hintText: 'Enter your preferred time',
@@ -61,7 +61,7 @@ class TimePreferencePage extends StatelessWidget {
                 ),
 
                 SizedBox(
-                  width: 150,
+                  width: 400,
                   child: AppSearchField(
                     hintText: 'Enter an alternate time',
                   ),
@@ -72,7 +72,6 @@ class TimePreferencePage extends StatelessWidget {
                   height: 50,
                   child: AppButton(
                     text: 'Submit',
-                    backgroundColor: const Color.fromARGB(255, 80, 101, 117),
                     onPressed: () {
                       // Handle submit action
                     },
