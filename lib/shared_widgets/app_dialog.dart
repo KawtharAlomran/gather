@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+
 import 'app_button.dart';
 
 class AppDialog extends StatelessWidget {
@@ -24,30 +24,34 @@ class AppDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge,
-      ),
-      content: Text(
-        message,
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
-      actions: [
-        //   the secondary button variant when available.
-        AppButton(
-          text: cancelText,
-          fullWidth: false,
-          onPressed: onCancel ?? () => Navigator.pop(context),
-        ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      title: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      content: Text(message, style: Theme.of(context).textTheme.bodyMedium),
 
-        // Support primary and danger variants when available.
-        AppButton(
-          text: confirmText,
-          fullWidth: false,
-          onPressed: onConfirm,
+      actionsAlignment: MainAxisAlignment.center,
+      actionsPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+      actions: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: AppButton(
+                text: cancelText,
+                fullWidth: true,
+                onPressed: onCancel ?? () => Navigator.pop(context),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            Flexible(
+              child: AppButton(
+                text: confirmText,
+                fullWidth: true,
+                onPressed: onConfirm,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -76,4 +80,3 @@ class AppDialog extends StatelessWidget {
 // - The confirmation action is provided by the screen.
 // - The cancel button closes the dialog by default.
 // - Button labels can be customized.
-

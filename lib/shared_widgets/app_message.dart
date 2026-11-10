@@ -1,10 +1,6 @@
-
 import 'package:flutter/material.dart';
 
-enum MessageType {
-  success,
-  error,
-}
+enum MessageType { success, error }
 
 class AppMessage extends StatelessWidget {
   final String message;
@@ -18,10 +14,58 @@ class AppMessage extends StatelessWidget {
     this.onClose,
   });
 
+  static OverlayEntry? _currentOverlay;
+
+  // Display a message at the top of the screen.
+  static void show(
+    BuildContext context, {
+    required String message,
+    MessageType type = MessageType.success,
+  }) {
+    // Remove any previously displayed message.
+    _currentOverlay?.remove();
+    _currentOverlay?.dispose();
+    _currentOverlay = null;
+
+    final overlay = Overlay.of(context);
+    late final OverlayEntry entry;
+
+    void closeMessage() {
+      if (_currentOverlay != entry) return;
+
+      entry.remove();
+      entry.dispose();
+      _currentOverlay = null;
+    }
+
+    entry = OverlayEntry(
+      builder: (overlayContext) {
+        return Positioned(
+          top: MediaQuery.paddingOf(overlayContext).top + 16,
+          left: 16,
+          right: 16,
+          child: Material(
+            color: Colors.transparent,
+            child: SafeArea(
+              top: false,
+              child: AppMessage(
+                message: message,
+                type: type,
+                onClose: closeMessage,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    _currentOverlay = entry;
+    overlay.insert(entry);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
     final bool isSuccess = type == MessageType.success;
 
     final Color backgroundColor = isSuccess
@@ -44,59 +88,44 @@ class AppMessage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: foregroundColor,
-            size: 24,
-          ),
+          Icon(icon, color: foregroundColor, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: foregroundColor,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: foregroundColor),
             ),
           ),
-          if (onClose != null)
-            IconButton(
-              onPressed: onClose,
-              icon: Icon(
-                Icons.close,
-                color: foregroundColor,
-              ),
-            ),
+          IconButton(
+            onPressed: onClose,
+            icon: Icon(Icons.close, color: foregroundColor),
+          ),
         ],
       ),
     );
   }
 }
+
 // Example 1: Success message (default)
 //
-// AppMessage(
+// AppMessage.show(
+//   context,
 //   message: 'Invitation accepted successfully!',
-// ),
+// );
 //
 // Example 2: Error message
 //
-// AppMessage(
+// AppMessage.show(
+//   context,
 //   message: 'Something went wrong. Please try again.',
 //   type: MessageType.error,
-// ),
-//
-// Example 3: Message with close button
-//
-// AppMessage(
-//   message: 'Gathering created successfully!',
-//   onClose: () {
-//     // Hide the message.
-//   },
-// ),
+// );
 //
 // Notes:
-// - The default message type is success.
-// - Supports success and error messages.
+// - Messages appear automatically at the top of the screen.
+// - Success is the default message type.
+// - Only one message is displayed at a time.
+// - Messages can be dismissed using the close button.
 // - Colors and text styles are taken from the app theme.
-// - The icon changes automatically based on the message type.
-// - The close button is optional.
-// - The message content can be customized for each screen.
+// - No Stack, Positioned, or setState is needed in the calling screen.
