@@ -54,3 +54,26 @@ class AppDialog extends StatelessWidget {
   }
 }
 
+// Example usage:
+//
+// showDialog(
+//   context: context,
+//   builder: (dialogContext) => AppDialog(
+//     title: 'Decline Invitation',
+//     message: 'Are you sure you want to decline this invitation?',
+//     confirmText: 'Decline',
+//     onConfirm: () {
+//       Navigator.pop(dialogContext);
+//       // TODO: Update the invitation status.
+//     },
+//   ),
+// );
+//
+// Notes:
+// - Uses the shared AppButton component.
+// - Colors and text styles are taken from the app theme.
+// - Border radius is defined in this component.
+// - The confirmation action is provided by the screen.
+// - The cancel button closes the dialog by default.
+// - Button labels can be customized.
+
