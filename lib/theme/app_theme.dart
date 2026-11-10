@@ -21,6 +21,11 @@ class AppTheme {
       onSecondary: Colors.white,
     ),
 
+  navigationBarTheme: const NavigationBarThemeData(
+    backgroundColor: surfaceColor,
+    indicatorColor: primaryColor,
+  ),
+
     scaffoldBackgroundColor: backgroundColor,
 
     textTheme: const TextTheme(
@@ -34,14 +39,8 @@ class AppTheme {
         fontSize: 20,
         fontWeight: FontWeight.bold,
       ),
-      bodyLarge: TextStyle(
-        color: textColor,
-        fontSize: 16,
-      ),
-      bodyMedium: TextStyle(
-        color: textColor,
-        fontSize: 14,
-      ),
+      bodyLarge: TextStyle(color: textColor, fontSize: 16),
+      bodyMedium: TextStyle(color: textColor, fontSize: 14),
     ),
   );
 }

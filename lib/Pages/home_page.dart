@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'NotificationPage.dart';
 import 'profile_screen.dart';
 import 'create_gathering_screen.dart'; 
-import 'app_bottom_nav.dart';
 import 'gathering_details_screen.dart';
 import 'invitee_gather_details_screen.dart'; 
 
@@ -80,10 +79,6 @@ class HomePage extends StatelessWidget {
         ) 
         
       ),
-      bottomNavigationBar: const AppBottomNav(
-      selectedIndex: 1,
-      ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(

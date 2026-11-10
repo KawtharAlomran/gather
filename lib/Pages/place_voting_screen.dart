@@ -1,10 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:gather/Pages/app_bottom_nav.dart';
-import 'package:gather/models/place_model.dart';
-import 'package:gather/shared_widgets/app_card.dart';
 
 class PlaceVotingScreen extends StatefulWidget {
   const PlaceVotingScreen({super.key});
@@ -66,44 +63,16 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
           },
         ),
       ),
-
       bottomNavigationBar: const AppBottomNav(
         selectedIndex: 1,
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Recommended for Group',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Expanded(
-              child: places.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : ListView.separated(
-                      itemCount: places.length,
-                      separatorBuilder: (context, index) {
-                        return const SizedBox(height: 12);
-                      },
-                      itemBuilder: (context, index) {
-                        final place = places[index];
-
-                        return buildPlaceCard(place);
-                      },
-                    ),
-            ),
-          ],
+      body: const Center(
+        child: Text(
+          'Place Voting Screen',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

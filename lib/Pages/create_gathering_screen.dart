@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/TimePreference.dart';
-
 class CreateGathering extends StatelessWidget {
   const CreateGathering({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: const AppBottomNav(selectedIndex: 1),
+// bottomNavigationBar: const BottomNavigation(),
       appBar: AppBar(
         title: const Text('Create Gathering'),
         leading: IconButton(

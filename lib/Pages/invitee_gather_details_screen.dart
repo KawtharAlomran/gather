@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'app_bottom_nav.dart';
 import 'package:gather/Pages/place_voting_screen.dart';
 
 class InviteeGatherDetails extends StatelessWidget {
@@ -40,7 +39,6 @@ class InviteeGatherDetails extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const AppBottomNav(selectedIndex: 0),
     );
   }
 }
