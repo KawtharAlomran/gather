@@ -1,0 +1,15 @@
+
+[
+  {
+    "id": "inv_1",
+    "gatheringId": "gather_1",
+    "inviterId": "user_1",
+    "status": "pending"
+  },
+  {
+    "id": "inv_2",
+    "gatheringId": "gather_2",
+    "inviterId": "user_2",
+    "status": "pending"
+  }
+]
