@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/LocationPreferencePage.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/gathering_details_screen.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import 'package:gather/shared_widgets/app_text_field.dart';
@@ -25,9 +24,6 @@ class TimePreferencePage extends StatelessWidget {
                 );
               },
         ),
-      ),
-      bottomNavigationBar: const AppBottomNav(
-        selectedIndex: 1,
       ),
       body: Center(
         child: Column(

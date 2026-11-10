@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signup_page.dart';
-import 'home_page.dart';
+import 'BottomNavigation.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -25,7 +25,7 @@ class LoginPage extends StatelessWidget {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>  HomePage(),
+                    builder: (_) => const BottomNavigation(),
                   ),
                 );
               },

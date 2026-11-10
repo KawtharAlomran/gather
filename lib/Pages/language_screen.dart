@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
 
 class LanguageScreen extends StatelessWidget {
   const LanguageScreen({super.key});
@@ -15,9 +14,6 @@ class LanguageScreen extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-      ),
-      bottomNavigationBar: const AppBottomNav(
-        selectedIndex: 2,
       ),
       body: const Center(
         child: Text(

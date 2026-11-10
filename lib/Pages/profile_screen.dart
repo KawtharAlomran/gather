@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/friends_screen.dart';
 import 'package:gather/Pages/language_screen.dart';
 import 'package:gather/Pages/login_screen.dart';
-
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: const AppBottomNav(selectedIndex: 2),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

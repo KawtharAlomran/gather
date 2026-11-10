@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
 import 'package:gather/Pages/home_page.dart';
 
 class InvitationPage extends StatelessWidget {
@@ -8,10 +7,6 @@ class InvitationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-      bottomNavigationBar: const AppBottomNav(
-        selectedIndex: 0,
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

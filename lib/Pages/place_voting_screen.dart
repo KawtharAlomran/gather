@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/app_bottom_nav.dart';
 
 class PlaceVotingScreen extends StatelessWidget {
   const PlaceVotingScreen({super.key});
@@ -15,9 +14,6 @@ class PlaceVotingScreen extends StatelessWidget {
             Navigator.of(context).maybePop();
           },
         ),
-      ),
-      bottomNavigationBar: const AppBottomNav(
-        selectedIndex: 1,
       ),
       body: const Center(
         child: Text(
