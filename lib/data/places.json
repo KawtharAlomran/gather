@@ -1,0 +1,16 @@
+[
+    {
+        "id": "1",
+        "name": "La Pecora Bianca",
+        "category": "Italian",
+        "rating": 4.8,
+        "image": "assets/images/la_pecora.png"
+    },
+    {
+        "id": "2",
+        "name": "Wildwood Cafe",
+        "category": "Brunch • Coffee",
+        "rating": 4.5,
+        "image": "assets/images/wildwood.png"
+    }
+]
