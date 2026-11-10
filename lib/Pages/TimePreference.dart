@@ -54,19 +54,33 @@ class TimePreferencePage extends StatelessWidget {
             ),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 16,
               children: [
-                AppTextField(
-                  label: 'Preferred Time',
-                  hintText: 'Enter your preferred time',
+                SizedBox(
+                  width: 150,
+                  child: AppTextField(
+                    label: 'Preferred Time',
+                    hintText: 'Enter your preferred time',
+                  ),
                 ),
-                AppSearchField(
-                  hintText: 'Search for a time',
+
+                SizedBox(
+                  width: 150,
+                  child: AppSearchField(
+                    hintText: 'Enter an alternate time',
+                  ),
                 ),
-                AppButton(
-                  text: 'Submit',
-                  onPressed: () {
-                    // Handle submit action
-                  },
+
+                SizedBox(
+                  width: 400,
+                  height: 50,
+                  child: AppButton(
+                    text: 'Submit',
+                    backgroundColor: const Color.fromARGB(255, 80, 101, 117),
+                    onPressed: () {
+                      // Handle submit action
+                    },
+                  ),
                 ),
               ],
             )
