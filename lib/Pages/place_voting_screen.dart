@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:gather/Pages/BottomNavigation.dart';
+import 'package:gather/data/repositories/place_repository.dart';
 import 'package:gather/models/place_model.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_button.dart';
@@ -15,10 +12,9 @@ class PlaceVotingScreen extends StatefulWidget {
 }
 
 class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
-  // Places loaded from the JSON file
-  List<Place> places = [];
+  final PlaceRepository placeRepository = MockPlaceRepository();
 
-  // Stores the ID of the place that the user voted for
+  List<Place> places = [];
   String? votedPlaceId;
 
   @override
@@ -27,36 +23,23 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     loadPlaces();
   }
 
-  // Load places from the local JSON file
   Future<void> loadPlaces() async {
     try {
-      final String jsonString =
-          await rootBundle.loadString('lib/data/places.json');
+      final loadedPlaces = await placeRepository.getPlaces();
 
-      final List<dynamic> jsonData = jsonDecode(jsonString);
+      if (!mounted) return;
 
       setState(() {
-        places = jsonData
-            .map((json) => Place.fromJson(json))
-            .toList();
+        places = loadedPlaces;
       });
-
-      debugPrint('Places loaded: ${places.length}');
     } catch (e) {
       debugPrint('Error loading places: $e');
     }
   }
 
-  // Vote or remove vote
   void vote(String placeId) {
     setState(() {
-      if (votedPlaceId == placeId) {
-        // Clicking Voted again removes the vote
-        votedPlaceId = null;
-      } else {
-        // Vote for this place
-        votedPlaceId = placeId;
-      }
+      votedPlaceId = votedPlaceId == placeId ? null : placeId;
     });
   }
 
@@ -66,18 +49,13 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
       appBar: AppBar(
         title: const Text(
           'Place Voting',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-
       body: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: 20,
@@ -86,34 +64,11 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Filter chips
-            const Row(
-              children: [
-                Chip(
-                  label: Text('Italian'),
-                ),
-                SizedBox(width: 8),
-                Chip(
-                  label: Text('Distance < 2mi'),
-                ),
-                SizedBox(width: 8),
-                Chip(
-                  label: Text('Highly Rated'),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // Section title
             Text(
               'Recommended for Group',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-
             const SizedBox(height: 16),
-
-            // List of places
             Expanded(
               child: places.isEmpty
                   ? const Center(
@@ -121,15 +76,10 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                     )
                   : ListView.separated(
                       itemCount: places.length,
-
-                      separatorBuilder: (context, index) {
-                        return const SizedBox(height: 12);
-                      },
-
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (context, index) {
-                        final place = places[index];
-
-                        return buildPlaceCard(place);
+                        return buildPlaceCard(places[index]);
                       },
                     ),
             ),
@@ -139,24 +89,31 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     );
   }
 
-  // Builds one place card
   Widget buildPlaceCard(Place place) {
-    // True only for the place that the user voted for
     final bool isVoted = votedPlaceId == place.id;
-
-    // Get colors from AppTheme through ThemeData
     final colors = Theme.of(context).colorScheme;
 
     return AppCard(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          // Place information
+          if (place.image != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                place.image!,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Place name
                 Text(
                   place.name,
                   style: const TextStyle(
@@ -164,10 +121,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 6),
-
-                // Place rating
                 Row(
                   children: [
                     Icon(
@@ -175,9 +129,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                       size: 18,
                       color: colors.primary,
                     ),
-
                     const SizedBox(width: 4),
-
                     Text(
                       place.rating.toString(),
                       style: const TextStyle(
@@ -186,30 +138,20 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 6),
-
-                // Place category
                 Text(
                   place.category,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-
                 const SizedBox(height: 10),
-
-                // Vote button
                 Align(
                   alignment: Alignment.centerRight,
                   child: AppButton(
                     text: isVoted ? 'Voted' : 'Vote',
-
                     fullWidth: false,
-                    backgroundColor: isVoted
-                        ? colors.primary
-                        : colors.secondary,
-                    onPressed: () {
-                      vote(place.id);
-                    },
+                    backgroundColor:
+                        isVoted ? colors.primary : colors.secondary,
+                    onPressed: () => vote(place.id),
                   ),
                 ),
               ],
