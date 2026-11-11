@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/TimePreference.dart';
+import 'package:gather/Pages/time_preference_screen.dart';
 class CreateGathering extends StatelessWidget {
   const CreateGathering({super.key});
 
@@ -28,11 +28,11 @@ class CreateGathering extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-         onPressed: () {
+        onPressed: () {
   Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (context) => TimePreferencePage(),
+      builder: (context) => TimePreferenceScreen(),
     ),
   );
 },
