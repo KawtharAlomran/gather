@@ -48,7 +48,7 @@ class HomePage extends StatelessWidget {
           children: [
             Text('Home Page'),
             const SizedBox(height: 20),
-             ElevatedButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
@@ -62,7 +62,7 @@ class HomePage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-             ElevatedButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
