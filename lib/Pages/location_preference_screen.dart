@@ -8,6 +8,7 @@ import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_text_field.dart';
 import 'package:gather/shared_widgets/invite_method_tabs.dart';
 import 'package:gather/shared_widgets/friends_invite_widget.dart';
+import 'package:gather/shared_widgets/app_message.dart';
 
 class LocationPreferenceScreen extends StatefulWidget {
   final String selectedTime;
@@ -44,10 +45,10 @@ class _LocationPreferenceScreenState
 
   Future<void> savePreferences() async {
     if (locationController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your location'),
-        ),
+      AppMessage.show(
+        context,
+        message: 'Please enter your location',
+        type: MessageType.error,
       );
       return;
     }
@@ -64,6 +65,16 @@ class _LocationPreferenceScreenState
     );
 
     await repository.savePreferences(preferences);
+
+    if (!mounted) return;
+
+    AppMessage.show(
+      context,
+      message: 'Preferences saved successfully!',
+      type: MessageType.success,
+    );
+
+    await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
 
