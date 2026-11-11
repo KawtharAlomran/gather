@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-import 'package:flutter/services.dart';
-=======
 import 'package:gather/data/repositories/place_repository.dart';
->>>>>>> 06b6ee601f82e6014fd6d05ea1b5303cb69d7e09
 import 'package:gather/models/place_model.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_button.dart';
