@@ -63,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 12),
 
               Text(
-                'User Name',
+                'Nour Al Sulais',
                 style: theme.textTheme.headlineMedium,
               ),
 
