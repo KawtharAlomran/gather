@@ -9,6 +9,9 @@ import 'package:gather/shared_widgets/app_text_field.dart';
 import 'package:gather/shared_widgets/invite_method_tabs.dart';
 import 'package:gather/shared_widgets/friends_invite_widget.dart';
 import 'package:gather/shared_widgets/app_message.dart';
+import 'package:gather/shared_widgets/email_invite_widget.dart';
+import 'package:gather/shared_widgets/link_invite_widget.dart';
+
 
 class LocationPreferenceScreen extends StatefulWidget {
   final String selectedTime;
@@ -34,6 +37,7 @@ class _LocationPreferenceScreenState
   final suggestedLocationController = TextEditingController();
 
   Set<String> selectedFriendIds = {};
+  List<String> selectedEmails = [];
   InviteMethod selectedMethod = InviteMethod.friends;
 
   @override
@@ -202,14 +206,17 @@ class _LocationPreferenceScreenState
         );
 
       case InviteMethod.email:
-        return const Center(
-          child: Text('Email invitation'),
+        return EmailInviteWidget(
+          selectedEmails: selectedEmails,
+          onEmailsChanged: (emails) {
+            setState(() {
+              selectedEmails = emails;
+            });
+          },
         );
 
       case InviteMethod.link:
-        return const Center(
-          child: Text('Link invitation'),
-        );
+        return const LinkInviteWidget();
     }
   }
 }
