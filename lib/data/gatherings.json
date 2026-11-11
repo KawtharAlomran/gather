@@ -1,0 +1,15 @@
+
+[
+  {
+    "id": "gather_1",
+    "title": "Cozy Soup Sunday",
+    "creatorEmail": "nour@example.com",
+    "participantIds": ["user_1", "user_2", "user_3"]
+  },
+  {
+    "id": "gather_2",
+    "title": "Nature Photography Hike",
+    "creatorEmail": "naba@example.com",
+    "participantIds": ["user_2", "user_3", "user_4"]
+  }
+]
