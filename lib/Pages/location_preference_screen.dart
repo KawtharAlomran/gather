@@ -9,14 +9,14 @@ import 'package:gather/shared_widgets/app_text_field.dart';
 
 class LocationPreferenceScreen extends StatefulWidget {
   final String selectedTime;
-  final String selectedActivity;
+  final List<String> selectedActivities;
   final List<DateTime> selectedDates;
 
   const LocationPreferenceScreen({
     super.key,
     required this.selectedDates,
     required this.selectedTime,
-    required this.selectedActivity,
+    required this.selectedActivities,
   });
 
   @override
@@ -51,7 +51,7 @@ class _LocationPreferenceScreenState
     final preferences = PreferenceModel(
       dates: widget.selectedDates,
       time: widget.selectedTime,
-      activities: [widget.selectedActivity],
+      activities: widget.selectedActivities,
       location: locationController.text.trim(),
       suggestedLocations:
           suggestedLocationController.text.trim().isEmpty

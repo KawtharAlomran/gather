@@ -20,7 +20,7 @@ class _TimePreferenceScreenState
   final Set<DateTime> selectedDates = {};
 
   String selectedTime = 'Afternoon';
-  String selectedActivity = 'Dinner';
+  final Set<String> selectedActivities = {'Dinner'};
 
   final List<String> activities = [
     'Dinner',
@@ -33,6 +33,8 @@ class _TimePreferenceScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         title: const Text(
           'My Preferences',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -42,9 +44,8 @@ class _TimePreferenceScreenState
           onPressed: () => Navigator.pop(context),
         ),
       ),
-
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,23 +60,21 @@ class _TimePreferenceScreenState
                   availableCalendarFormats: const {
                     CalendarFormat.month: 'Month',
                   },
-
                   selectedDayPredicate: (day) {
                     return selectedDates.any(
                       (date) => isSameDay(date, day),
                     );
                   },
-
                   onDaySelected: (day, newFocusedDay) {
                     setState(() {
                       focusedDay = newFocusedDay;
                       selectedDay = day;
 
-                      final isAlreadySelected = selectedDates.any(
+                      final alreadySelected = selectedDates.any(
                         (date) => isSameDay(date, day),
                       );
 
-                      if (isAlreadySelected) {
+                      if (alreadySelected) {
                         selectedDates.removeWhere(
                           (date) => isSameDay(date, day),
                         );
@@ -84,12 +83,10 @@ class _TimePreferenceScreenState
                       }
                     });
                   },
-
                   headerStyle: const HeaderStyle(
                     formatButtonVisible: false,
                     titleCentered: false,
                   ),
-
                   calendarStyle: CalendarStyle(
                     outsideDaysVisible: true,
                     selectedDecoration: BoxDecoration(
@@ -103,17 +100,13 @@ class _TimePreferenceScreenState
                       ),
                       shape: BoxShape.circle,
                     ),
-                    todayTextStyle: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
                 ),
               ),
 
               const SizedBox(height: 16),
 
-              if (selectedDay != null)
+              if (selectedDay != null) ...[
                 Text(
                   'Tap a date to edit preferences',
                   style: Theme.of(context)
@@ -121,15 +114,11 @@ class _TimePreferenceScreenState
                       .titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-
-              const SizedBox(height: 8),
-
-              if (selectedDay != null)
+                const SizedBox(height: 8),
                 AppCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         _formatDate(selectedDay!),
@@ -138,18 +127,9 @@ class _TimePreferenceScreenState
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-
                       const SizedBox(height: 6),
-
-                      Text(
-                        'Preferred Time',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium,
-                      ),
-
+                      const Text('Preferred Time'),
                       const SizedBox(height: 8),
-
                       Row(
                         children: [
                           _timeButton(
@@ -171,6 +151,7 @@ class _TimePreferenceScreenState
                     ],
                   ),
                 ),
+              ],
 
               const SizedBox(height: 16),
 
@@ -189,21 +170,25 @@ class _TimePreferenceScreenState
                 runSpacing: 8,
                 children: activities.map((activity) {
                   final isSelected =
-                      selectedActivity == activity;
+                      selectedActivities.contains(activity);
 
                   return ChoiceChip(
                     label: Text(activity),
                     selected: isSelected,
-                    onSelected: (_) {
+                    onSelected: (selected) {
                       setState(() {
-                        selectedActivity = activity;
+                        if (selected) {
+                          selectedActivities.add(activity);
+                        } else {
+                          selectedActivities.remove(activity);
+                        }
                       });
                     },
                   );
                 }).toList(),
               ),
 
-              const Spacer(),
+              const SizedBox(height: 32),
 
               AppButton(
                 text: 'Next',
@@ -213,13 +198,10 @@ class _TimePreferenceScreenState
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                LocationPreferenceScreen(
-                              selectedDates:
-                                  selectedDates.toList(),
+                            builder: (_) => LocationPreferenceScreen(
+                              selectedDates: selectedDates.toList(),
                               selectedTime: selectedTime,
-                              selectedActivity:
-                                  selectedActivity,
+                              selectedActivities: selectedActivities.toList(),
                             ),
                           ),
                         );
