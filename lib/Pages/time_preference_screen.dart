@@ -22,6 +22,7 @@ class _TimePreferenceScreenState
   String selectedTime = 'Afternoon';
   final Set<String> selectedActivities = {'Dinner'};
 
+  //For now the activities are hardcoded, but in the future, they will be fetched from the created gathering 
   final List<String> activities = [
     'Dinner',
     'Movie night',
@@ -50,6 +51,7 @@ class _TimePreferenceScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // date selection
               AppCard(
                 padding: const EdgeInsets.all(8),
                 child: TableCalendar(
@@ -65,6 +67,8 @@ class _TimePreferenceScreenState
                       (date) => isSameDay(date, day),
                     );
                   },
+
+                  // When a day is selected, update the selectedDay and focusedDay
                   onDaySelected: (day, newFocusedDay) {
                     setState(() {
                       focusedDay = newFocusedDay;
@@ -74,6 +78,8 @@ class _TimePreferenceScreenState
                         (date) => isSameDay(date, day),
                       );
 
+                      // If the day is already selected, remove it from the set; otherwise, add it
+                      // This allows for multiple date selections
                       if (alreadySelected) {
                         selectedDates.removeWhere(
                           (date) => isSameDay(date, day),
@@ -155,6 +161,7 @@ class _TimePreferenceScreenState
 
               const SizedBox(height: 16),
 
+              // activity selection
               Text(
                 'Preferred Activities',
                 style: Theme.of(context)
@@ -165,6 +172,7 @@ class _TimePreferenceScreenState
 
               const SizedBox(height: 8),
 
+              // Wrap the activities in a Wrap widget to allow for multiple lines
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -172,6 +180,9 @@ class _TimePreferenceScreenState
                   final isSelected =
                       selectedActivities.contains(activity);
 
+                  // Use ChoiceChip for each activity
+                  // When selected, add to selectedActivities; 
+                  // when deselected, remove from selectedActivities
                   return ChoiceChip(
                     label: Text(activity),
                     selected: isSelected,
@@ -192,9 +203,11 @@ class _TimePreferenceScreenState
 
               AppButton(
                 text: 'Next',
+                // Disable the button if no dates are selected
                 onPressed: selectedDates.isEmpty
                     ? null
                     : () {
+                      // Navigate to the LocationPreferenceScreen, passing the selected dates, time, and activities
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -213,7 +226,8 @@ class _TimePreferenceScreenState
       ),
     );
   }
-
+  
+  // Helper method to create a time selection button
   Widget _timeButton({
     required String title,
     required String subtitle,
@@ -268,6 +282,7 @@ class _TimePreferenceScreenState
     );
   }
 
+  // Helper method to format a DateTime object into a readable string
   String _formatDate(DateTime date) {
     const weekdays = [
       'Monday',
@@ -279,6 +294,7 @@ class _TimePreferenceScreenState
       'Sunday',
     ];
 
+    // List of month names for formatting
     const months = [
       'January',
       'February',
@@ -293,7 +309,8 @@ class _TimePreferenceScreenState
       'November',
       'December',
     ];
-
+    
+    // Return a formatted string like "Monday, January 1"
     return '${weekdays[date.weekday - 1]}, '
         '${months[date.month - 1]} ${date.day}';
   }

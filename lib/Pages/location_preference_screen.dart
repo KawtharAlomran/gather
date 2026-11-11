@@ -6,6 +6,8 @@ import 'package:gather/models/preference_model.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_text_field.dart';
+import 'package:gather/shared_widgets/invite_method_tabs.dart';
+import 'package:gather/shared_widgets/friends_invite_widget.dart';
 
 class LocationPreferenceScreen extends StatefulWidget {
   final String selectedTime;
@@ -23,13 +25,15 @@ class LocationPreferenceScreen extends StatefulWidget {
   State<LocationPreferenceScreen> createState() =>
       _LocationPreferenceScreenState();
 }
-
 class _LocationPreferenceScreenState
     extends State<LocationPreferenceScreen> {
   final PreferenceRepository repository = MockPreferenceRepository();
 
   final locationController = TextEditingController();
   final suggestedLocationController = TextEditingController();
+
+  Set<String> selectedFriendIds = {};
+  InviteMethod selectedMethod = InviteMethod.friends;
 
   @override
   void dispose() {
@@ -128,7 +132,24 @@ class _LocationPreferenceScreenState
               ),
             ),
 
-            const Spacer(),
+            const SizedBox(height: 24),
+            InviteMethodTabs(
+              selectedMethod: selectedMethod,
+              onChanged: (method) {
+                setState(() {
+                  selectedMethod = method;
+                });
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            SizedBox(
+              height: 300,
+              child: _buildInviteContent(),
+            ),
+
+            const SizedBox(height: 24),
 
             AppButton(
               text: 'Save Preferences',
@@ -137,6 +158,47 @@ class _LocationPreferenceScreenState
           ],
         ),
       ),
+      
     );
+  }
+  Widget _buildInviteContent() {
+    switch (selectedMethod) {
+      case InviteMethod.friends:
+        return FriendsInviteWidget(
+          friends: const [
+            Invitee(
+              id: '1',
+              name: 'Sarah',
+              email: 'sarah@gmail.com',
+            ),
+            Invitee(
+              id: '2',
+              name: 'Manar',
+              email: 'manar@gmail.com',
+            ),
+            Invitee(
+              id: '3',
+              name: 'Shahad',
+              email: 'shahad@gmail.com',
+            ),
+          ],
+          selectedFriendIds: selectedFriendIds,
+          onSelectionChanged: (updatedIds) {
+            setState(() {
+              selectedFriendIds = updatedIds;
+            });
+          },
+        );
+
+      case InviteMethod.email:
+        return const Center(
+          child: Text('Email invitation'),
+        );
+
+      case InviteMethod.link:
+        return const Center(
+          child: Text('Link invitation'),
+        );
+    }
   }
 }
