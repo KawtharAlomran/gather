@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'dart:async';
+
+import '../theme/app_theme.dart';
 
 enum MessageType { success, error }
 
@@ -70,24 +73,20 @@ class AppMessage extends StatelessWidget {
 
     _currentOverlay = entry;
     overlay.insert(entry);
-    _dismissTimer = Timer(
-      const Duration(seconds: 2),
-      closeMessage,
-    );
+    _dismissTimer = Timer(const Duration(seconds: 2), closeMessage);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final bool isSuccess = type == MessageType.success;
 
     final Color backgroundColor = isSuccess
-        ? colorScheme.primaryContainer
-        : colorScheme.errorContainer;
+        ? AppTheme.successColor
+        : AppTheme.errorColor;
 
     final Color foregroundColor = isSuccess
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onErrorContainer;
+        ? AppTheme.successTextColor
+        : AppTheme.errorTextColor;
 
     final IconData icon = isSuccess
         ? Icons.check_circle_outline
