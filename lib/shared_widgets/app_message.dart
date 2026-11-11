@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 enum MessageType { success, error }
 
@@ -15,6 +16,7 @@ class AppMessage extends StatelessWidget {
   });
 
   static OverlayEntry? _currentOverlay;
+  static Timer? _dismissTimer;
 
   // Display a message at the top of the screen.
   static void show(
@@ -22,6 +24,10 @@ class AppMessage extends StatelessWidget {
     required String message,
     MessageType type = MessageType.success,
   }) {
+    // Cancel the timer of the previous message.
+    _dismissTimer?.cancel();
+    _dismissTimer = null;
+
     // Remove any previously displayed message.
     _currentOverlay?.remove();
     _currentOverlay?.dispose();
@@ -32,6 +38,9 @@ class AppMessage extends StatelessWidget {
 
     void closeMessage() {
       if (_currentOverlay != entry) return;
+
+      _dismissTimer?.cancel();
+      _dismissTimer = null;
 
       entry.remove();
       entry.dispose();
@@ -61,6 +70,10 @@ class AppMessage extends StatelessWidget {
 
     _currentOverlay = entry;
     overlay.insert(entry);
+    _dismissTimer = Timer(
+      const Duration(seconds: 2),
+      closeMessage,
+    );
   }
 
   @override
