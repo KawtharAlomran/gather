@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/TimePreference.dart';
+import 'package:gather/Pages/time_preference_screen.dart';
 import 'package:gather/Pages/place_voting_screen.dart';
 
 
@@ -43,7 +43,7 @@ class GatheringDetailsScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const TimePreferencePage()),
+                  MaterialPageRoute(builder: (_) => const TimePreferenceScreen()),
                 );
               },
               child: const Text('Set preferences'),
