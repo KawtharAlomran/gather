@@ -22,7 +22,7 @@ class HomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const NotificationPage(),
+                  builder: (context) => const NotificationsPage(),
                 ),
               );
             },
