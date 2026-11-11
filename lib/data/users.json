@@ -5,27 +5,31 @@
     "firstName": "Nour",
     "lastName": "Al Sulais",
     "email": "nour@example.com",
-    "avatar": "assets/images/nour.png"
+    "avatar": "assets/images/nour.png",
+    "passwordHash": "adbf8b9685ae8ab0b23759bcd86cdd710e4ed4dab21b28f1160243a18ed07afd"
   },
   {
     "id": "user_2",
     "firstName": "Naba",
     "lastName": "Al Antaif",
     "email": "naba@example.com",
-    "avatar": "assets/images/naba.png"
+    "avatar": "assets/images/naba.png",
+    "passwordHash": "adbf8b9685ae8ab0b23759bcd86cdd710e4ed4dab21b28f1160243a18ed07afd"
   },
   {
     "id": "user_3",
     "firstName": "Sarah",
     "lastName": "Ahmed",
     "email": "sarah@example.com",
-    "avatar": "assets/images/sarah.png"
+    "avatar": "assets/images/sarah.png",
+    "passwordHash": "adbf8b9685ae8ab0b23759bcd86cdd710e4ed4dab21b28f1160243a18ed07afd"
   },
   {
     "id": "user_4",
     "firstName": "Manar",
     "lastName": "Ali",
     "email": "manar@example.com",
-    "avatar": "assets/images/manar.png"
+    "avatar": "assets/images/manar.png",
+    "passwordHash": "adbf8b9685ae8ab0b23759bcd86cdd710e4ed4dab21b28f1160243a18ed07afd"
   }
 ]

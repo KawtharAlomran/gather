@@ -3,6 +3,8 @@ import 'signup_page.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_text_field.dart';
 import 'BottomNavigation.dart';
+import '../data/repositories/user_repository.dart';
+import '../shared_widgets/app_message.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,6 +18,9 @@ class _LoginPageState extends State<LoginPage> {
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final UserRepository _userRepository = MockUserRepository();
+
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -24,15 +29,41 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const BottomNavigation(),
-        ),
-      );
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    final user = await _userRepository.login(
+      _emailController.text,
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = false;
+    });
+
+    if (user == null) {
+      AppMessage.show(
+        context,
+        message: 'Invalid email or password.',
+        type: MessageType.error,
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const BottomNavigation(),
+      ),
+    );
   }
 
   @override
@@ -118,6 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                 AppButton(
                   text: 'Log in',
                   onPressed: _login,
+                  isLoading: isLoading,
                 ),
 
                 const SizedBox(height: 16),
