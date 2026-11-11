@@ -1,0 +1,31 @@
+
+[
+  {
+    "id": "user_1",
+    "firstName": "Nour",
+    "lastName": "Al Sulais",
+    "email": "nour@example.com",
+    "avatar": "assets/images/nour.png"
+  },
+  {
+    "id": "user_2",
+    "firstName": "Naba",
+    "lastName": "Al Antaif",
+    "email": "naba@example.com",
+    "avatar": "assets/images/naba.png"
+  },
+  {
+    "id": "user_3",
+    "firstName": "Sarah",
+    "lastName": "Ahmed",
+    "email": "sarah@example.com",
+    "avatar": "assets/images/sarah.png"
+  },
+  {
+    "id": "user_4",
+    "firstName": "Manar",
+    "lastName": "Ali",
+    "email": "manar@example.com",
+    "avatar": "assets/images/manar.png"
+  }
+]
