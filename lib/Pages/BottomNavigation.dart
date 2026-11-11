@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'home_page.dart';
-import 'invitationPage.dart';
+import 'InvitationPage.dart';
 import 'profile_screen.dart';
 
 class BottomNavigation extends StatefulWidget {
