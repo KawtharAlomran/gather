@@ -153,13 +153,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               AppButton(
                 text: 'Log out',
                 onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LoginPage(),
-                    ),
-                    (route) => false,
-                  );
+                  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginPage(),
+                  ),
+                  (route) => false,
+                );
                 },
               ),
 
