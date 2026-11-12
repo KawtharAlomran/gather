@@ -13,6 +13,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // Controls whether notifications are enabled.
   bool notificationsEnabled = true;
 
   @override
@@ -27,7 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             children: [
               const SizedBox(height: 32),
-
+              // Display the user's profile image and edit button.
               Stack(
                 children: [
                   CircleAvatar(
@@ -52,7 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Colors.white,
                         icon: const Icon(Icons.edit),
                         onPressed: () {
-                          // Image selection will be added later.
+                          // Image selection will be implemented in phase 4.
                         },
                       ),
                     ),
@@ -78,6 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: const Text('Notifications'),
                       trailing: Switch(
                         value: notificationsEnabled,
+                        // Update the notification setting and refresh the UI.
                         onChanged: (value) {
                           setState(() {
                             notificationsEnabled = value;
@@ -90,6 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: const Icon(Icons.language),
                       title: const Text('Language'),
                       trailing: const Icon(Icons.chevron_right),
+                      // Open the language settings screen.
                       onTap: () {
                         Navigator.push(
                           context,
@@ -112,6 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: const Icon(Icons.people_outline),
                       title: const Text('Friends'),
                       trailing: const Icon(Icons.chevron_right),
+                      // Open the user's friends list.
                       onTap: () {
                         Navigator.push(
                           context,
@@ -149,10 +153,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
 
               const SizedBox(height: 32),
-
               AppButton(
                 text: 'Log out',
                 onPressed: () {
+                  // Clear the navigation stack and return to the login screen. 
                   Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (_) => const LoginPage(),
