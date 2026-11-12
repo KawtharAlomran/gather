@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'Pages/login_screen.dart';
 import 'package:gather/Pages/profile_screen.dart';
 import 'package:gather/Pages/place_voting_screen.dart';
-import 'package:gather/Pages/InvitationPage.dart';
 import 'package:gather/Pages/home_page.dart';
 import 'package:gather/Pages/Time_preference_screen.dart';
 
