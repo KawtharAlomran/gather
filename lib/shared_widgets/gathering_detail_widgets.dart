@@ -22,8 +22,7 @@ class GatheringHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // YOUR IMAGE: replace gatheringHeaderAsset above with your asset path.
-          // The fallback avoids an error until the image is added.
+
           Image.asset(
             gatheringHeaderAsset,
             fit: BoxFit.cover,
