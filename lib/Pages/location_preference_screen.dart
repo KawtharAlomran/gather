@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:gather/Pages/time_preference_screen.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+
 import 'package:gather/Pages/home_page.dart';
+import 'package:gather/Pages/time_preference_screen.dart';
 import 'package:gather/data/repositories/preference_repository.dart';
 import 'package:gather/models/preference_model.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import 'package:gather/shared_widgets/app_card.dart';
-import 'package:gather/shared_widgets/app_text_field.dart';
-import 'package:gather/shared_widgets/invite_method_tabs.dart';
-import 'package:gather/shared_widgets/friends_invite_widget.dart';
 import 'package:gather/shared_widgets/app_message.dart';
-import 'package:gather/shared_widgets/email_invite_widget.dart';
-import 'package:gather/shared_widgets/link_invite_widget.dart';
-
 
 class LocationPreferenceScreen extends StatefulWidget {
   final String selectedTime;
@@ -29,43 +28,182 @@ class LocationPreferenceScreen extends StatefulWidget {
   State<LocationPreferenceScreen> createState() =>
       _LocationPreferenceScreenState();
 }
+
 class _LocationPreferenceScreenState
     extends State<LocationPreferenceScreen> {
   final PreferenceRepository repository = MockPreferenceRepository();
 
-  final locationController = TextEditingController();
-  final suggestedLocationController = TextEditingController();
+  final MapController mapController = MapController();
+  final TextEditingController suggestedLocationController =
+      TextEditingController();
 
-  Set<String> selectedFriendIds = {};
-  List<String> selectedEmails = [];
-  InviteMethod selectedMethod = InviteMethod.friends;
+  LatLng selectedLocation = const LatLng(24.7136, 46.6753);
+
+  String locationName = 'Finding your location...';
+
+  final List<String> suggestedLocations = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      getUserLocation();
+    });
+  }
 
   @override
   void dispose() {
-    locationController.dispose();
     suggestedLocationController.dispose();
     super.dispose();
   }
 
+  Future<void> getUserLocation() async {
+    try {
+      final bool serviceEnabled =
+          await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+        if (!mounted) return;
+
+        setState(() {
+          locationName = 'Please enable location services';
+        });
+        return;
+      }
+
+      LocationPermission permission =
+          await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+
+        setState(() {
+          locationName =
+              'Location permission was denied. Tap the map to select.';
+        });
+        return;
+      }
+
+      final Position position =
+          await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      final LatLng userLocation = LatLng(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        selectedLocation = userLocation;
+      });
+
+      mapController.move(userLocation, 15);
+
+      await selectLocation(userLocation);
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        locationName =
+            'Could not find your location. Tap the map to select.';
+      });
+    }
+  }
+
+  Future<void> selectLocation(LatLng point) async {
+    if (!mounted) return;
+
+    setState(() {
+      selectedLocation = point;
+      locationName = 'Loading location...';
+    });
+
+    try {
+      final Geocoding geocoding = Geocoding();
+
+      final List<Placemark> placemarks =
+          await geocoding.placemarkFromCoordinates(
+        point.latitude,
+        point.longitude,
+      );
+
+      if (!mounted) return;
+
+      if (placemarks.isNotEmpty) {
+        final Placemark place = placemarks.first;
+
+        final List<String> parts = [
+          place.name,
+          place.street,
+          place.locality,
+          place.country,
+        ].whereType<String>().where((value) {
+          return value.trim().isNotEmpty;
+        }).toList();
+
+        setState(() {
+          locationName = parts.isEmpty
+              ? '${point.latitude}, ${point.longitude}'
+              : parts.join(', ');
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        locationName =
+            '${point.latitude.toStringAsFixed(5)}, '
+            '${point.longitude.toStringAsFixed(5)}';
+      });
+    }
+  }
+
+  void addSuggestedLocation() {
+    final String location =
+        suggestedLocationController.text.trim();
+
+    if (location.isEmpty) return;
+
+    if (!suggestedLocations.contains(location)) {
+      setState(() {
+        suggestedLocations.add(location);
+      });
+    }
+
+    suggestedLocationController.clear();
+  }
+
   Future<void> savePreferences() async {
-    if (locationController.text.trim().isEmpty) {
+    if (locationName == 'Finding your location...' ||
+        locationName == 'Loading location...' ||
+        locationName.startsWith('Please enable') ||
+        locationName.startsWith('Location permission') ||
+        locationName.startsWith('Could not find')) {
       AppMessage.show(
         context,
-        message: 'Please enter your location',
+        message: 'Please select a valid location',
         type: MessageType.error,
       );
       return;
     }
 
-    final preferences = PreferenceModel(
+    final PreferenceModel preferences = PreferenceModel(
       dates: widget.selectedDates,
       time: widget.selectedTime,
       activities: widget.selectedActivities,
-      location: locationController.text.trim(),
-      suggestedLocations:
-          suggestedLocationController.text.trim().isEmpty
-              ? []
-              : [suggestedLocationController.text.trim()],
+      location: locationName,
+      suggestedLocations: suggestedLocations,
     );
 
     await repository.savePreferences(preferences);
@@ -104,13 +242,13 @@ class _LocationPreferenceScreenState
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => TimePreferenceScreen(),
+                builder: (_) => const TimePreferenceScreen(),
               ),
             );
           },
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,13 +260,56 @@ class _LocationPreferenceScreenState
             const SizedBox(height: 10),
 
             AppCard(
-              padding: const EdgeInsets.all(16),
-              child: AppTextField(
-                controller: locationController,
-                label: 'Select your location',
-                hintText: 'Enter city, neighborhood, or venue',
+              padding: EdgeInsets.zero,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  height: 300,
+                  child: FlutterMap(
+                    mapController: mapController,
+                    options: MapOptions(
+                      initialCenter: selectedLocation,
+                      initialZoom: 12,
+                      onTap: (_, point) {
+                        selectLocation(point);
+                      },
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.gather',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: selectedLocation,
+                            width: 50,
+                            height: 50,
+                            child: const Icon(
+                              Icons.location_pin,
+                              color: Colors.red,
+                              size: 50,
+                            ),
+                          ),
+                        ],
+                      ),
+                      RichAttributionWidget(
+                        attributions: [
+                          TextSourceAttribution(
+                            'OpenStreetMap contributors',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
+
+            const SizedBox(height: 10),
+
+            Text(locationName),
 
             const SizedBox(height: 24),
 
@@ -140,28 +321,45 @@ class _LocationPreferenceScreenState
 
             AppCard(
               padding: const EdgeInsets.all(16),
-              child: AppTextField(
-                controller: suggestedLocationController,
-                label: 'Select location',
-                hintText: 'Enter city, neighborhood, or venue',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: suggestedLocationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Add suggested location',
+                        hintText: 'Example: a coffee shop or park',
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) {
+                        addSuggestedLocation();
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: addSuggestedLocation,
+                  ),
+                ],
               ),
             ),
 
-            const SizedBox(height: 24),
-            InviteMethodTabs(
-              selectedMethod: selectedMethod,
-              onChanged: (method) {
-                setState(() {
-                  selectedMethod = method;
-                });
-              },
-            ),
+            const SizedBox(height: 12),
 
-            const SizedBox(height: 16),
-
-            SizedBox(
-              height: 300,
-              child: _buildInviteContent(),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestedLocations.map((location) {
+                return Chip(
+                  label: Text(location),
+                  deleteIcon: const Icon(Icons.close),
+                  onDeleted: () {
+                    setState(() {
+                      suggestedLocations.remove(location);
+                    });
+                  },
+                );
+              }).toList(),
             ),
 
             const SizedBox(height: 24),
@@ -173,50 +371,6 @@ class _LocationPreferenceScreenState
           ],
         ),
       ),
-      
     );
-  }
-  Widget _buildInviteContent() {
-    switch (selectedMethod) {
-      case InviteMethod.friends:
-        return FriendsInviteWidget(
-          friends: const [
-            Invitee(
-              id: '1',
-              name: 'Sarah',
-              email: 'sarah@gmail.com',
-            ),
-            Invitee(
-              id: '2',
-              name: 'Manar',
-              email: 'manar@gmail.com',
-            ),
-            Invitee(
-              id: '3',
-              name: 'Shahad',
-              email: 'shahad@gmail.com',
-            ),
-          ],
-          selectedFriendIds: selectedFriendIds,
-          onSelectionChanged: (updatedIds) {
-            setState(() {
-              selectedFriendIds = updatedIds;
-            });
-          },
-        );
-
-      case InviteMethod.email:
-        return EmailInviteWidget(
-          selectedEmails: selectedEmails,
-          onEmailsChanged: (emails) {
-            setState(() {
-              selectedEmails = emails;
-            });
-          },
-        );
-
-      case InviteMethod.link:
-        return const LinkInviteWidget();
-    }
   }
 }
