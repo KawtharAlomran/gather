@@ -12,10 +12,13 @@ class LanguageScreen extends StatefulWidget {
 }
 
 class _LanguageScreenState extends State<LanguageScreen> {
+  // Current language selected by the user.
   String selectedLanguage = 'English';
+  // Used to determine whether the user changed the language.
   String initialLanguage = 'English';
 
   void _saveLanguage() {
+    // Do not save if the language was not changed.
     if (selectedLanguage == initialLanguage) {
       return;
     }
@@ -53,6 +56,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                     title: const Text('English'),
                     value: 'English',
                     groupValue: selectedLanguage,
+                    // Update the selected language and refresh the UI.
                     onChanged: (value) {
                       setState(() {
                         selectedLanguage = value!;
@@ -63,6 +67,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                     title: const Text('Arabic'),
                     value: 'Arabic',
                     groupValue: selectedLanguage,
+                    // Update the selected language and refresh the UI.
                     onChanged: (value) {
                       setState(() {
                         selectedLanguage = value!;
@@ -75,6 +80,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
 
             const SizedBox(height: 24),
 
+            // Enable Save only after the user selects a different language.
             AppButton(
               text: 'Save',
               onPressed: selectedLanguage == initialLanguage
