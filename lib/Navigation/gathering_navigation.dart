@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/gathering_model.dart';
 import '../Pages/gathering_details_screen.dart';
 import '../Pages/invitee_gather_details_screen.dart';
+import '../Pages/confirmed_gathering_page.dart';
 
 /// Opens the correct gathering details page based on the current user's role.
 Future<void> openGatheringDetails({
@@ -16,7 +17,9 @@ Future<void> openGatheringDetails({
 }) async {
   await Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => gathering.creatorId == currentUserId
+      builder: (_) => (gathering.status == 'confirmed' || gathering.dateTime != null)
+          ? ConfirmedGatheringPage(gathering: gathering, onLeaveGathering: onLeaveGathering)
+          : gathering.creatorId == currentUserId
           ? CreatorGatheringPage(
               gathering: gathering,
               onPlaceVoting: onPlaceVoting,
