@@ -1,16 +1,75 @@
-
 [
   {
     "id": "gather_1",
     "title": "Cozy Soup Sunday",
     "creatorEmail": "nour@example.com",
-    "participantIds": ["user_1", "user_2", "user_3"]
+    "participantIds": [
+      "user_1",
+      "user_2",
+      "user_3"
+    ],
+    "createdBy": "Nour",
+    "creatorId": "user-nour",
+    "status": "planning",
+    "attendingCount": 3,
+    "dateTime": null,
+    "dateOptions": [
+      {
+        "id": "option-a",
+        "label": "Saturday, Nov 28",
+        "dateTime": "2026-11-28T10:00:00+03:00",
+        "votes": 1
+      },
+      {
+        "id": "option-b",
+        "label": "Sunday, Nov 29",
+        "dateTime": "2026-11-29T16:00:00+03:00",
+        "votes": 2
+      }
+    ],
+    "votingEnded": false,
+    "planningProgress": 45,
+    "attendeeNames": [
+      "Nour",
+      "Sara",
+      "Reem"
+    ]
   },
   {
     "id": "gather_2",
     "title": "Nature Photography Hike",
     "creatorEmail": "naba@example.com",
-    "participantIds": ["user_2", "user_3", "user_4"]
+    "participantIds": [
+      "user_2",
+      "user_3",
+      "user_4"
+    ],
+    "createdBy": "Naba",
+    "creatorId": "user-naba",
+    "status": "planning",
+    "attendingCount": 3,
+    "dateTime": null,
+    "dateOptions": [
+      {
+        "id": "option-a",
+        "label": "Saturday, Nov 28",
+        "dateTime": "2026-11-28T10:00:00+03:00",
+        "votes": 1
+      },
+      {
+        "id": "option-b",
+        "label": "Sunday, Nov 29",
+        "dateTime": "2026-11-29T16:00:00+03:00",
+        "votes": 2
+      }
+    ],
+    "votingEnded": false,
+    "planningProgress": 60,
+    "attendeeNames": [
+      "Naba",
+      "Hala",
+      "Layan"
+    ]
   },
   {
     "id": "autumn-group-hike",
@@ -19,7 +78,15 @@
     "attendingCount": 3,
     "dateTime": "2026-11-21T09:00:00+03:00",
     "votingEnded": true,
-    "creatorId": "user-sarah"
+    "creatorId": "user-sarah",
+    "status": "confirmed",
+    "dateOptions": [],
+    "place": "Al Khobar Corniche",
+    "attendeeNames": [
+      "Sara",
+      "Manar",
+      "Noura"
+    ]
   },
   {
     "id": "friendsgiving-dinner",
@@ -49,6 +116,54 @@
         "votes": 1
       }
     ],
-    "creatorId": "user-manar"
+    "creatorId": "user-manar",
+    "status": "planning",
+    "attendeeNames": [
+      "Manar",
+      "Sara",
+      "Noura",
+      "Reem",
+      "Layan",
+      "Hala",
+      "Naba",
+      "Dana"
+    ]
+  },
+  {
+    "id": "weekend-trip",
+    "title": "Weekend Trip",
+    "createdBy": "Sara",
+    "creatorId": "user-sara",
+    "status": "confirmed",
+    "attendingCount": 5,
+    "attendeeNames": [
+      "Sara",
+      "Manar",
+      "Noura",
+      "Dana",
+      "Hala"
+    ],
+    "dateTime": "2026-12-14T22:00:00+03:00",
+    "place": "Dhahran Movie Cinema",
+    "votingEnded": true,
+    "dateOptions": []
+  },
+  {
+    "id": "team-dinner",
+    "title": "Team Dinner",
+    "createdBy": "Naba",
+    "creatorId": "user-naba",
+    "status": "confirmed",
+    "attendingCount": 4,
+    "attendeeNames": [
+      "Naba",
+      "Reem",
+      "Layan",
+      "Sara"
+    ],
+    "dateTime": "2026-12-18T19:30:00+03:00",
+    "place": "BLANCA Restaurant",
+    "votingEnded": true,
+    "dateOptions": []
   }
 ]

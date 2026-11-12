@@ -1,5 +1,132 @@
 [
-  {"id":"u1","name":"Sara","gatheringId":"autumn-group-hike"},
-  {"id":"u2","name":"Manar","gatheringId":"autumn-group-hike"},
-  {"id":"u3","name":"Noura","gatheringId":"autumn-group-hike"}
+  {
+    "id": "u1",
+    "name": "Sara",
+    "gatheringId": "autumn-group-hike"
+  },
+  {
+    "id": "u2",
+    "name": "Manar",
+    "gatheringId": "autumn-group-hike"
+  },
+  {
+    "id": "u3",
+    "name": "Noura",
+    "gatheringId": "autumn-group-hike"
+  },
+  {
+    "id": "attendee-001",
+    "name": "Nour",
+    "gatheringId": "gather_1"
+  },
+  {
+    "id": "attendee-002",
+    "name": "Sara",
+    "gatheringId": "gather_1"
+  },
+  {
+    "id": "attendee-003",
+    "name": "Reem",
+    "gatheringId": "gather_1"
+  },
+  {
+    "id": "attendee-004",
+    "name": "Naba",
+    "gatheringId": "gather_2"
+  },
+  {
+    "id": "attendee-005",
+    "name": "Hala",
+    "gatheringId": "gather_2"
+  },
+  {
+    "id": "attendee-006",
+    "name": "Layan",
+    "gatheringId": "gather_2"
+  },
+  {
+    "id": "attendee-007",
+    "name": "Manar",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-008",
+    "name": "Sara",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-009",
+    "name": "Noura",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-010",
+    "name": "Reem",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-011",
+    "name": "Layan",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-012",
+    "name": "Hala",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-013",
+    "name": "Naba",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-014",
+    "name": "Dana",
+    "gatheringId": "friendsgiving-dinner"
+  },
+  {
+    "id": "attendee-015",
+    "name": "Sara",
+    "gatheringId": "weekend-trip"
+  },
+  {
+    "id": "attendee-016",
+    "name": "Manar",
+    "gatheringId": "weekend-trip"
+  },
+  {
+    "id": "attendee-017",
+    "name": "Noura",
+    "gatheringId": "weekend-trip"
+  },
+  {
+    "id": "attendee-018",
+    "name": "Dana",
+    "gatheringId": "weekend-trip"
+  },
+  {
+    "id": "attendee-019",
+    "name": "Hala",
+    "gatheringId": "weekend-trip"
+  },
+  {
+    "id": "attendee-020",
+    "name": "Naba",
+    "gatheringId": "team-dinner"
+  },
+  {
+    "id": "attendee-021",
+    "name": "Reem",
+    "gatheringId": "team-dinner"
+  },
+  {
+    "id": "attendee-022",
+    "name": "Layan",
+    "gatheringId": "team-dinner"
+  },
+  {
+    "id": "attendee-023",
+    "name": "Sara",
+    "gatheringId": "team-dinner"
+  }
 ]
