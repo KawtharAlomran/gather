@@ -63,6 +63,8 @@ flutter:
     - lib/data/notification.json
     - lib/data/gatherings.json
     - lib/data/attendance.json
+    - lib/data/users.json
+    - assets/images/background.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

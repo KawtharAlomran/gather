@@ -4,8 +4,7 @@ import 'app_dialog.dart';
 import '../models/attendee_model.dart';
 import '../data/repositories/attendance_repository.dart';
 
-/// Set this to your own asset path after adding it to pubspec.yaml.
-const String gatheringHeaderAsset = 'assets/images/gathering_header.png';
+const String gatheringHeaderAsset = 'assets/images/background.png';
 
 class GatheringHeader extends StatelessWidget {
   final Future<void> Function() onLeave;
@@ -18,8 +17,6 @@ class GatheringHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // YOUR IMAGE: replace gatheringHeaderAsset above with your asset path.
-          // The fallback avoids an error until the image is added.
           Image.asset(
             gatheringHeaderAsset,
             fit: BoxFit.cover,
