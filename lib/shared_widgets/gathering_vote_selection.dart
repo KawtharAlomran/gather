@@ -1,3 +1,7 @@
+// Provides a reusable date voting interface for invitees.
+// Allows users to select and save a preferred date
+// without managing the creator's voting controls.
+
 import 'package:flutter/material.dart';
 import '../models/gathering_model.dart';
 import 'app_button.dart';

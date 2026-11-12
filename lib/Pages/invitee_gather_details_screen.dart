@@ -1,3 +1,7 @@
+// Displays gathering details for invited participants.
+// Allows invitees to select their preferred date,
+// view attendance, and leave the gathering.
+
 import 'package:flutter/material.dart';
 
 import '../models/gathering_model.dart';

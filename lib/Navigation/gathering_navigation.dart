@@ -1,3 +1,7 @@
+// Centralizes navigation to the appropriate gathering details page.
+// Determines whether the current user is the creator or an invitee
+// and opens the corresponding page based on their role.
+
 import 'package:flutter/material.dart';
 
 import '../models/gathering_model.dart';

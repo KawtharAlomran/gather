@@ -1,3 +1,7 @@
+// Contains reusable UI components shared across gathering details pages.
+// Ensures consistent design and reduces duplicated code
+// for the header, attendance display, and confirmation dialog.
+
 import 'package:flutter/material.dart';
 import 'app_card.dart';
 import 'app_dialog.dart';
