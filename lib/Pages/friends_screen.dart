@@ -3,7 +3,9 @@ import '../shared_widgets/app_dialog.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_card.dart';
 import '../shared_widgets/app_message.dart';
-
+import '../data/repositories/user_repository.dart';
+import '../models/user_model.dart';
+import '../shared_widgets/app_search_field.dart';
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
 
@@ -28,11 +30,119 @@ class _FriendsScreenState extends State<FriendsScreen> {
     },
   ];
   final TextEditingController _emailController = TextEditingController();
-
+  final UserRepository _userRepository = MockUserRepository();
   @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
+  }
+
+  void _showAddFriendDialog() {
+    _emailController.clear();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                icon: const Icon(Icons.highlight_off),
+              ),
+            ],
+          ),
+          content: AppSearchField(
+            hintText: 'Search by email',
+            controller: _emailController,
+          ),
+          actions: [
+            AppButton(
+              text: '+ Add New Friend',
+              onPressed: () {
+                _searchAndAddFriend(dialogContext);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _searchAndAddFriend(
+    BuildContext dialogContext,
+  ) async {
+    final enteredEmail = _emailController.text.trim().toLowerCase();
+
+    if (enteredEmail.isEmpty) {
+      Navigator.pop(dialogContext);
+
+      AppMessage.show(
+        context,
+        message: 'Please enter an email address.',
+        type: MessageType.error,
+      );
+      return;
+    }
+
+    final users = await _userRepository.getUsers();
+
+    User? foundUser;
+
+    for (final user in users) {
+      if (user.email.toLowerCase() == enteredEmail) {
+        foundUser = user;
+        break;
+      }
+    }
+
+    if (!mounted) return;
+
+    Navigator.pop(dialogContext);
+
+    if (foundUser == null) {
+      AppMessage.show(
+        context,
+        message: 'This user is not registered.',
+        type: MessageType.error,
+      );
+      return;
+    }
+
+    final alreadyFriend = friends.any(
+      (friend) =>
+          friend['email']!.toLowerCase() == enteredEmail,
+    );
+
+    if (alreadyFriend) {
+      AppMessage.show(
+        context,
+        message: 'This user is already your friend.',
+        type: MessageType.error,
+      );
+      return;
+    }
+
+    setState(() {
+      friends.add({
+        'name': foundUser!.fullName,
+        'email': foundUser.email,
+      });
+    });
+
+    AppMessage.show(
+      context,
+      message: 'Friend added successfully.',
+      type: MessageType.success,
+    );
   }
 
   @override
@@ -66,7 +176,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: AppButton(
               text: 'Add New Friend',
-              onPressed: (){},
+              onPressed: _showAddFriendDialog,
             ),
           ),
 
