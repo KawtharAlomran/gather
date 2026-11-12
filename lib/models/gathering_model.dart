@@ -1,18 +1,8 @@
-
-class Gathering{
+class Gathering {
   final String id;
   final String title;
-  final String createdBy;
-  final String creatorId;
-  final int attendingCount;
-  final String? place;
-  final String status;
-  final int planningProgress;
-  final List<String> attendeeNames;
-  final DateTime? dateTime;
-  final List<DateOptionModel> dateOptions;
-  String? selectedOptionId;
-  bool votingEnded;
+  final String creatorEmail;
+  final List<String> participantIds;
 
   const Gathering({
     required this.id,
@@ -21,27 +11,25 @@ class Gathering{
     required this.participantIds,
   });
 
-  // Create a Gathering object from JSON.
   factory Gathering.fromJson(Map<String, dynamic> json) {
     return Gathering(
       id: json['id'] as String,
       title: json['title'] as String,
-      creatorEmail: json['creatorEmail'] as String,
-      participantIds: List<String>.from(json['participantIds']),
+      creatorEmail:
+          json['creatorEmail'] as String? ?? json['createdBy'] as String? ?? '',
+      participantIds: (json['participantIds'] as List? ?? [])
+          .map((id) => id.toString())
+          .toList(),
     );
   }
 
-  // Convert a Gathering object to JSON.
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'creatorEmail': creatorEmail,
-      'participantIds': participantIds,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'creatorEmail': creatorEmail,
+    'participantIds': participantIds,
+  };
 
-  // Create an updated copy of a Gathering.
   Gathering copyWith({
     String? id,
     String? title,
@@ -57,6 +45,20 @@ class Gathering{
   }
 }
 
+class GatheringModel {
+  final String id;
+  final String title;
+  final String createdBy;
+  final String creatorId;
+  final int attendingCount;
+  final String? place;
+  final String status;
+  final int planningProgress;
+  final List<String> attendeeNames;
+  final DateTime? dateTime;
+  final List<DateOptionModel> dateOptions;
+  String? selectedOptionId;
+  bool votingEnded;
 
   GatheringModel({
     required this.id,
@@ -81,13 +83,19 @@ class Gathering{
     return GatheringModel(
       id: json['id'] as String,
       title: json['title'] as String,
-      createdBy: json['createdBy'] as String,
-      creatorId: json['creatorId'] as String,
+      createdBy:
+          json['createdBy'] as String? ?? json['creatorEmail'] as String? ?? '',
+      creatorId:
+          json['creatorId'] as String? ?? json['creatorEmail'] as String? ?? '',
       attendingCount: json['attendingCount'] as int? ?? 0,
       place: json['place'] as String?,
-      status: json['status'] as String? ?? (json['dateTime'] != null ? 'confirmed' : 'planning'),
+      status:
+          json['status'] as String? ??
+          (json['dateTime'] != null ? 'confirmed' : 'planning'),
       planningProgress: (json['planningProgress'] as num?)?.toInt() ?? 0,
-      attendeeNames: (json['attendeeNames'] as List? ?? []).map((name) => name.toString()).toList(),
+      attendeeNames: (json['attendeeNames'] as List? ?? [])
+          .map((name) => name.toString())
+          .toList(),
       dateTime: json['dateTime'] == null
           ? null
           : DateTime.parse(json['dateTime'] as String),
@@ -99,23 +107,21 @@ class Gathering{
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'createdBy': createdBy,
-      'creatorId': creatorId,
-      'attendingCount': attendingCount,
-      'place': place,
-      'status': status,
-      'planningProgress': planningProgress,
-      'attendeeNames': attendeeNames,
-      'dateTime': dateTime?.toUtc().toIso8601String(),
-      'dateOptions': dateOptions.map((option) => option.toJson()).toList(),
-      'selectedOptionId': selectedOptionId,
-      'votingEnded': votingEnded,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'createdBy': createdBy,
+    'creatorId': creatorId,
+    'attendingCount': attendingCount,
+    'place': place,
+    'status': status,
+    'planningProgress': planningProgress,
+    'attendeeNames': attendeeNames,
+    'dateTime': dateTime?.toUtc().toIso8601String(),
+    'dateOptions': dateOptions.map((option) => option.toJson()).toList(),
+    'selectedOptionId': selectedOptionId,
+    'votingEnded': votingEnded,
+  };
 }
 
 class DateOptionModel {
@@ -140,12 +146,10 @@ class DateOptionModel {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'label': label,
-      'dateTime': dateTime.toUtc().toIso8601String(),
-      'votes': votes,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'label': label,
+    'dateTime': dateTime.toUtc().toIso8601String(),
+    'votes': votes,
+  };
 }

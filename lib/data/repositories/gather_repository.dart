@@ -1,5 +1,5 @@
-
 import 'dart:convert';
+
 import 'package:flutter/services.dart';
 
 import '../../models/gathering_model.dart';
@@ -25,18 +25,12 @@ class MockGatheringRepository implements GatheringRepository {
   Future<void> _loadGatherings() async {
     if (_gatherings != null) return;
 
-    final jsonString = await rootBundle.loadString(
-      'lib/data/gatherings.json',
-    );
+    final jsonString = await rootBundle.loadString('lib/data/gatherings.json');
 
     final List<dynamic> jsonData = jsonDecode(jsonString);
 
     _gatherings = jsonData
-        .map(
-          (item) => Gathering.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => Gathering.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
@@ -66,9 +60,7 @@ class MockGatheringRepository implements GatheringRepository {
   Future<Gathering> createGathering(Gathering gathering) async {
     await _loadGatherings();
 
-    final exists = _gatherings!.any(
-      (item) => item.id == gathering.id,
-    );
+    final exists = _gatherings!.any((item) => item.id == gathering.id);
 
     if (exists) {
       throw StateError('Gathering already exists: ${gathering.id}');
@@ -83,9 +75,7 @@ class MockGatheringRepository implements GatheringRepository {
   Future<Gathering> updateGathering(Gathering gathering) async {
     await _loadGatherings();
 
-    final index = _gatherings!.indexWhere(
-      (item) => item.id == gathering.id,
-    );
+    final index = _gatherings!.indexWhere((item) => item.id == gathering.id);
 
     if (index == -1) {
       throw StateError('Gathering not found: ${gathering.id}');
@@ -100,9 +90,7 @@ class MockGatheringRepository implements GatheringRepository {
   Future<void> deleteGathering(String gatheringId) async {
     await _loadGatherings();
 
-    final index = _gatherings!.indexWhere(
-      (item) => item.id == gatheringId,
-    );
+    final index = _gatherings!.indexWhere((item) => item.id == gatheringId);
 
     if (index == -1) {
       throw StateError('Gathering not found: $gatheringId');

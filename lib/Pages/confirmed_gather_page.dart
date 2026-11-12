@@ -15,10 +15,7 @@ class ConfirmedGatheringPage extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(child: ListView(children: [
-        GatheringHeader(onLeave: () async {
-          final confirmed = await confirmLeaveGathering(context);
-          if (confirmed && context.mounted) Navigator.pop(context);
-        }),
+
         Padding(padding: const EdgeInsets.all(16), child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
