@@ -14,9 +14,9 @@ class TimePreferenceScreen extends StatefulWidget {
 
 class _TimePreferenceScreenState
     extends State<TimePreferenceScreen> {
-  DateTime focusedDay = DateTime.now();
-  DateTime? selectedDay;
-  final Set<DateTime> selectedDates = {};
+  DateTime focusedDay = DateTime.now(); // The currently focused day in the calendar
+  DateTime? selectedDay; // The currently selected day in the calendar
+  final Set<DateTime> selectedDates = {}; // Stores the selected dates
 
   // Stores the selected time for each date
   final Map<DateTime, String> selectedTimes = {};
@@ -130,6 +130,8 @@ class _TimePreferenceScreenState
 
               const SizedBox(height: 16),
 
+              // Show the selected dates and their preferred times
+              // Only show this section if there are selected dates
               if (selectedDates.isNotEmpty) ...[
                 Text(
                   'Tap a date to edit preferences',
@@ -210,7 +212,8 @@ class _TimePreferenceScreenState
       ),
     );
   }
-
+  
+  // Helper method to build a list of date preference cards based on selected dates
   List<Widget> _buildDatePreferenceCards() {
     final dates = selectedDates.toList()
       ..sort((a, b) => a.compareTo(b));
@@ -236,7 +239,8 @@ class _TimePreferenceScreenState
               const Text('Preferred Time'),
 
               const SizedBox(height: 8),
-
+              
+              // Row of time selection buttons for the selected date
               Row(
                 children: [
                   _timeButton(
@@ -273,6 +277,8 @@ class _TimePreferenceScreenState
   }) {
     final isSelected = selectedTimes[date] == title;
 
+    // Use the selectedTimes map to determine if this button is selected for the given date
+    // When tapped, update the selected time for that date in the map
     return Expanded(
       child: GestureDetector(
         onTap: () {

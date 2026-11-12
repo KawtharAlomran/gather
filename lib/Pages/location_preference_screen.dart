@@ -13,10 +13,11 @@ import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_message.dart';
 
 class LocationPreferenceScreen extends StatefulWidget {
-  final Map<DateTime, String> selectedTimes;
-  final List<String> selectedActivities;
-  final List<DateTime> selectedDates;
-
+  final Map<DateTime, String> selectedTimes; // Stores the selected time for each date
+  final List<String> selectedActivities; // Stores the selected activities
+  final List<DateTime> selectedDates; // Stores the selected dates
+  
+  // Constructor for the LocationPreferenceScreen
   const LocationPreferenceScreen({
     super.key,
     required this.selectedDates,
@@ -31,18 +32,18 @@ class LocationPreferenceScreen extends StatefulWidget {
 
 class _LocationPreferenceScreenState
     extends State<LocationPreferenceScreen> {
-  final PreferenceRepository repository = MockPreferenceRepository();
-
+  final PreferenceRepository repository = MockPreferenceRepository(); 
   final MapController mapController = MapController();
   final TextEditingController suggestedLocationController =
-      TextEditingController();
+      TextEditingController(); // Controller for the suggested location input field
 
-  LatLng selectedLocation = const LatLng(24.7136, 46.6753);
+  LatLng selectedLocation = const LatLng(24.7136, 46.6753); // Default location (Riyadh, Saudi Arabia)
 
   String locationName = 'Finding your location...';
 
-  final List<String> suggestedLocations = [];
-
+  final List<String> suggestedLocations = []; // List to store suggested locations
+  
+  // Function to get the name of a location based on its coordinates
   Future<String> getLocationName(LatLng point) async {
     try {
       final Geocoding geocoding = Geocoding();
@@ -75,6 +76,7 @@ class _LocationPreferenceScreenState
     }
   }
 
+  // Initialize the state of the LocationPreferenceScreen
   @override
   void initState() {
     super.initState();
@@ -84,12 +86,14 @@ class _LocationPreferenceScreenState
     });
   }
 
+  // Dispose of the controllers when the widget is removed from the widget tree
   @override
   void dispose() {
     suggestedLocationController.dispose();
     super.dispose();
   }
 
+  // Function to get the user's current location
   Future<void> getUserLocation() async {
     try {
       final bool serviceEnabled =
@@ -103,7 +107,8 @@ class _LocationPreferenceScreenState
         });
         return;
       }
-
+      
+      // Check and request location permissions
       LocationPermission permission =
           await Geolocator.checkPermission();
 
@@ -122,6 +127,7 @@ class _LocationPreferenceScreenState
         return;
       }
 
+      // Get the current position of the user
       final Position position =
           await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -153,6 +159,7 @@ class _LocationPreferenceScreenState
     }
   }
 
+  // Function to select a location on the map and get its name
   Future<void> selectLocation(LatLng point) async {
     if (!mounted) return;
 
@@ -201,6 +208,7 @@ class _LocationPreferenceScreenState
     }
   }
 
+  // Function to add a suggested location to the list
   void addSuggestedLocation() {
     final String location =
         suggestedLocationController.text.trim();
@@ -215,7 +223,8 @@ class _LocationPreferenceScreenState
 
     suggestedLocationController.clear();
   }
-
+  
+  // Function to select a suggested location from the map
   Future<void> selectSuggestedLocation() async {
     final LatLng? selectedPoint = await showDialog<LatLng>(
       context: context,
@@ -240,6 +249,7 @@ class _LocationPreferenceScreenState
                     },
                   ),
                   children: [
+                    // Display the map tiles from OpenStreetMap
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -259,6 +269,7 @@ class _LocationPreferenceScreenState
                         ),
                       ],
                     ),
+                    // Display attribution for OpenStreetMap contributors
                     RichAttributionWidget(
                       attributions: [
                         TextSourceAttribution(
@@ -302,6 +313,7 @@ class _LocationPreferenceScreenState
     });
   }
 
+  // Function to save the user's preferences, including selected dates, times, activities, and location
   Future<void> savePreferences() async {
     if (locationName == 'Finding your location...' ||
         locationName == 'Loading location...' ||
@@ -316,6 +328,7 @@ class _LocationPreferenceScreenState
       return;
     }
 
+    // Create a PreferenceModel instance with the selected preferences
     final PreferenceModel preferences = PreferenceModel(
       dates: widget.selectedDates,
       times: widget.selectedTimes,
@@ -327,7 +340,7 @@ class _LocationPreferenceScreenState
     await repository.savePreferences(preferences);
 
     if (!mounted) return;
-
+    // Show a success message to the user
     AppMessage.show(
       context,
       message: 'Preferences saved successfully!',
@@ -345,7 +358,8 @@ class _LocationPreferenceScreenState
       ),
     );
   }
-
+  
+  // Build the UI for the LocationPreferenceScreen
   @override
   Widget build(BuildContext context) {
     return Scaffold(
