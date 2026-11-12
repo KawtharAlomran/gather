@@ -16,10 +16,11 @@ class _TimePreferenceScreenState
     extends State<TimePreferenceScreen> {
   DateTime focusedDay = DateTime.now();
   DateTime? selectedDay;
-
   final Set<DateTime> selectedDates = {};
 
-  String selectedTime = 'Afternoon';
+  // Stores the selected time for each date
+  final Map<DateTime, String> selectedTimes = {};
+
   final Set<String> selectedActivities = {'Dinner'};
 
   //For now the activities are hardcoded, but in the future, they will be fetched from the created gathering 
@@ -74,18 +75,23 @@ class _TimePreferenceScreenState
                       focusedDay = newFocusedDay;
                       selectedDay = day;
 
-                      final alreadySelected = selectedDates.any(
-                        (date) => isSameDay(date, day),
-                      );
+                      DateTime? existingDate;
 
-                      // If the day is already selected, remove it from the set; otherwise, add it
-                      // This allows for multiple date selections
-                      if (alreadySelected) {
-                        selectedDates.removeWhere(
-                          (date) => isSameDay(date, day),
-                        );
+                      for (final date in selectedDates) {
+                        if (isSameDay(date, day)) {
+                          existingDate = date;
+                          break;
+                        }
+                      }
+
+                      if (existingDate != null) {
+                        selectedDates.remove(existingDate);
+                        selectedTimes.remove(existingDate);
                       } else {
                         selectedDates.add(day);
+
+                        // Default time for a newly selected date
+                        selectedTimes[day] = 'Afternoon';
                       }
                     });
                   },
@@ -112,7 +118,7 @@ class _TimePreferenceScreenState
 
               const SizedBox(height: 16),
 
-              if (selectedDay != null) ...[
+              if (selectedDates.isNotEmpty) ...[
                 Text(
                   'Tap a date to edit preferences',
                   style: Theme.of(context)
@@ -120,43 +126,10 @@ class _TimePreferenceScreenState
                       .titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
+
                 const SizedBox(height: 8),
-                AppCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _formatDate(selectedDay!),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text('Preferred Time'),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _timeButton(
-                            title: 'Morning',
-                            subtitle: '8 AM – 12 PM',
-                          ),
-                          const SizedBox(width: 8),
-                          _timeButton(
-                            title: 'Afternoon',
-                            subtitle: '12 PM – 5 PM',
-                          ),
-                          const SizedBox(width: 8),
-                          _timeButton(
-                            title: 'Evening',
-                            subtitle: '5 PM – 10 PM',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+
+                ..._buildDatePreferenceCards(),
               ],
 
               const SizedBox(height: 16),
@@ -203,18 +176,17 @@ class _TimePreferenceScreenState
 
               AppButton(
                 text: 'Next',
-                // Disable the button if no dates are selected
                 onPressed: selectedDates.isEmpty
                     ? null
                     : () {
-                      // Navigate to the LocationPreferenceScreen, passing the selected dates, time, and activities
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => LocationPreferenceScreen(
                               selectedDates: selectedDates.toList(),
-                              selectedTime: selectedTime,
-                              selectedActivities: selectedActivities.toList(),
+                              selectedTimes: selectedTimes,
+                              selectedActivities:
+                                  selectedActivities.toList(),
                             ),
                           ),
                         );
@@ -226,19 +198,74 @@ class _TimePreferenceScreenState
       ),
     );
   }
+
+  List<Widget> _buildDatePreferenceCards() {
+    final dates = selectedDates.toList()
+      ..sort((a, b) => a.compareTo(b));
+
+    return dates.map((date) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: AppCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _formatDate(date),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              const Text('Preferred Time'),
+
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  _timeButton(
+                    date: date,
+                    title: 'Morning',
+                    subtitle: '8 AM – 12 PM',
+                  ),
+                  const SizedBox(width: 8),
+                  _timeButton(
+                    date: date,
+                    title: 'Afternoon',
+                    subtitle: '12 PM – 5 PM',
+                  ),
+                  const SizedBox(width: 8),
+                  _timeButton(
+                    date: date,
+                    title: 'Evening',
+                    subtitle: '5 PM – 10 PM',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList();
+  }
   
   // Helper method to create a time selection button
   Widget _timeButton({
+    required DateTime date,
     required String title,
     required String subtitle,
   }) {
-    final isSelected = selectedTime == title;
+    final isSelected = selectedTimes[date] == title;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
           setState(() {
-            selectedTime = title;
+            selectedTimes[date] = title;
           });
         },
         child: Container(
@@ -270,9 +297,7 @@ class _TimePreferenceScreenState
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
-                  color: isSelected
-                      ? Colors.white
-                      : Colors.grey,
+                  color: isSelected ? Colors.white : Colors.grey,
                 ),
               ),
             ],

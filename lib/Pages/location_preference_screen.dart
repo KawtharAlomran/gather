@@ -13,14 +13,14 @@ import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_message.dart';
 
 class LocationPreferenceScreen extends StatefulWidget {
-  final String selectedTime;
+  final Map<DateTime, String> selectedTimes;
   final List<String> selectedActivities;
   final List<DateTime> selectedDates;
 
   const LocationPreferenceScreen({
     super.key,
     required this.selectedDates,
-    required this.selectedTime,
+    required this.selectedTimes,
     required this.selectedActivities,
   });
 
@@ -42,6 +42,38 @@ class _LocationPreferenceScreenState
   String locationName = 'Finding your location...';
 
   final List<String> suggestedLocations = [];
+
+  Future<String> getLocationName(LatLng point) async {
+    try {
+      final Geocoding geocoding = Geocoding();
+      final List<Placemark> placemarks =
+          await geocoding.placemarkFromCoordinates(
+        point.latitude,
+        point.longitude,
+      );
+
+      if (placemarks.isEmpty) {
+        return '${point.latitude}, ${point.longitude}';
+      }
+
+      final Placemark place = placemarks.first;
+
+      final List<String> parts = [
+        place.name,
+        place.street,
+        place.locality,
+        place.country,
+      ].whereType<String>().where((value) {
+        return value.trim().isNotEmpty;
+      }).toList();
+
+      return parts.isEmpty
+          ? '${point.latitude}, ${point.longitude}'
+          : parts.join(', ');
+    } catch (_) {
+      return '${point.latitude}, ${point.longitude}';
+    }
+  }
 
   @override
   void initState() {
@@ -184,6 +216,92 @@ class _LocationPreferenceScreenState
     suggestedLocationController.clear();
   }
 
+  Future<void> selectSuggestedLocation() async {
+    final LatLng? selectedPoint = await showDialog<LatLng>(
+      context: context,
+      builder: (context) {
+        LatLng temporaryLocation = selectedLocation;
+
+        return AlertDialog(
+          title: const Text('Select suggested location'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 350,
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                return FlutterMap(
+                  options: MapOptions(
+                    initialCenter: temporaryLocation,
+                    initialZoom: 13,
+                    onTap: (_, point) {
+                      setDialogState(() {
+                        temporaryLocation = point;
+                      });
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.gather',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: temporaryLocation,
+                          width: 50,
+                          height: 50,
+                          child: const Icon(
+                            Icons.location_pin,
+                            color: Colors.red,
+                            size: 50,
+                          ),
+                        ),
+                      ],
+                    ),
+                    RichAttributionWidget(
+                      attributions: [
+                        TextSourceAttribution(
+                          'OpenStreetMap contributors',
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, temporaryLocation);
+              },
+              child: const Text('Select'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (selectedPoint == null) return;
+
+    final String location = await getLocationName(selectedPoint);
+
+    if (!mounted) return;
+
+    setState(() {
+      if (!suggestedLocations.contains(location)) {
+        suggestedLocations.add(location);
+      }
+    });
+  }
+
   Future<void> savePreferences() async {
     if (locationName == 'Finding your location...' ||
         locationName == 'Loading location...' ||
@@ -200,7 +318,7 @@ class _LocationPreferenceScreenState
 
     final PreferenceModel preferences = PreferenceModel(
       dates: widget.selectedDates,
-      time: widget.selectedTime,
+      times: widget.selectedTimes,
       activities: widget.selectedActivities,
       location: locationName,
       suggestedLocations: suggestedLocations,
@@ -317,28 +435,93 @@ class _LocationPreferenceScreenState
               'Suggested locations',
               style: Theme.of(context).textTheme.titleMedium,
             ),
+
             const SizedBox(height: 10),
 
             AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: suggestedLocationController,
-                      decoration: const InputDecoration(
-                        labelText: 'Add suggested location',
-                        hintText: 'Example: a coffee shop or park',
-                        border: InputBorder.none,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select location',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      onSubmitted: (_) {
-                        addSuggestedLocation();
-                      },
+                      Text(
+                        'Optional',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  InkWell(
+                    onTap: selectSuggestedLocation,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            color: Colors.grey.shade600,
+                            size: 30,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Select from the map',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 17,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: addSuggestedLocation,
+
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: selectSuggestedLocation,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF755C),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
+                      child: const Text(
+                        'Add',
+                        style: TextStyle(
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
