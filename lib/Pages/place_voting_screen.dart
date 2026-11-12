@@ -14,9 +14,10 @@ class PlaceVotingScreen extends StatefulWidget {
 class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
   final PlaceRepository placeRepository = MockPlaceRepository();
 
-  List<Place> places = [];
-  String? votedPlaceId;
+  List<Place> places = []; // List to hold the loaded places
+  String? votedPlaceId; // Store the ID of the place the user has voted for
   
+  // Widget to display a placeholder image when the actual image is not available
   Widget _emptyImage() {
     return Container(
       width: 80,
@@ -36,6 +37,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     loadPlaces();
   }
 
+  // Load the places from the repository
   Future<void> loadPlaces() async {
     try {
       final loadedPlaces = await placeRepository.getPlaces();
@@ -50,9 +52,10 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     }
   }
 
+  // Handle the voting action for a place
   void vote(String placeId) {
     setState(() {
-      votedPlaceId = votedPlaceId == placeId ? null : placeId;
+      votedPlaceId = votedPlaceId == placeId ? null : placeId; // Toggle vote for the selected place
     });
   }
 
@@ -87,11 +90,11 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                   ? const Center(
                       child: CircularProgressIndicator(),
                     )
-                  : ListView.separated(
+                  : ListView.separated( // Display the list of places with voting buttons
                       itemCount: places.length,
                       separatorBuilder: (_, __) =>
                           const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
+                      itemBuilder: (context, index) { // Build each place card in the list
                         return buildPlaceCard(places[index]);
                       },
                     ),
@@ -102,6 +105,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     );
   }
 
+  // Build the UI for a single place card
   Widget buildPlaceCard(Place place) {
     final bool isVoted = votedPlaceId == place.id;
     final colors = Theme.of(context).colorScheme;
@@ -111,6 +115,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
+          // Display the place image or a placeholder if the image is not available
           ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: imagePath != null && imagePath.isNotEmpty
@@ -123,7 +128,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                     return _emptyImage();
                   },
                 )
-              : _emptyImage(),
+              : _emptyImage(), // Display placeholder image if the actual image is not available
         ),
         const SizedBox(width: 12),
 
@@ -164,10 +169,13 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: AppButton(
+                    // Toggle the vote state for the place when the button is pressed
+                    // Update the button text and background color based on the vote state
                     text: isVoted ? 'Voted' : 'Vote',
                     fullWidth: false,
                     backgroundColor:
-                        isVoted ? colors.primary : colors.secondary,
+                        // Change the button color based on whether the user has voted for this place
+                        isVoted ? colors.primary : colors.secondary, 
                     onPressed: () => vote(place.id),
                   ),
                 ),
