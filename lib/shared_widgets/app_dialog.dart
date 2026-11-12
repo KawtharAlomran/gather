@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../theme/app_theme.dart';
 import 'app_button.dart';
 
 class AppDialog extends StatelessWidget {
@@ -85,6 +85,8 @@ class AppDialog extends StatelessWidget {
                 fullWidth: true,
                 backgroundColor:
                     cancelColor ?? theme.colorScheme.surfaceContainerHighest,
+                foregroundColor:
+                    cancelTextColor ?? AppTheme.secondaryButtonTextColor,
                 onPressed: onCancel ?? closeDialog,
               ),
             ),
