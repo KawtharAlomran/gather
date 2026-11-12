@@ -1,0 +1,41 @@
+[
+  {
+    "id": "autumn-group-hike",
+    "title": "Autumn Group Hike",
+    "createdBy": "Sarah",
+    "attendingCount": 3,
+    "dateTime": "2026-11-21T09:00:00+03:00",
+    "votingEnded": true,
+    "creatorId": "user-sarah"
+  },
+  {
+    "id": "friendsgiving-dinner",
+    "title": "Friendsgiving Dinner 🍁",
+    "createdBy": "Manar",
+    "attendingCount": 8,
+    "dateTime": null,
+    "votingEnded": false,
+    "selectedOptionId": "a",
+    "dateOptions": [
+      {
+        "id": "a",
+        "label": "Option A: Sat Morning, Nov 21",
+        "dateTime": "2026-11-21T09:00:00+03:00",
+        "votes": 4
+      },
+      {
+        "id": "b",
+        "label": "Option B: Sun Evening, Nov 22",
+        "dateTime": "2026-11-22T18:00:00+03:00",
+        "votes": 2
+      },
+      {
+        "id": "c",
+        "label": "Option C: Sat Morning, Nov 28",
+        "dateTime": "2026-11-28T09:00:00+03:00",
+        "votes": 1
+      }
+    ],
+    "creatorId": "user-manar"
+  }
+]

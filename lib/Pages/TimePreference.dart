@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/LocationPreferencePage.dart';
-import 'package:gather/Pages/gathering_details_screen.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import 'package:gather/shared_widgets/app_text_field.dart';
 import 'package:gather/shared_widgets/app_search_field.dart';
@@ -15,14 +14,7 @@ class TimePreferencePage extends StatelessWidget {
         title: const Text('Time Preference'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const GatheringDetailsScreen(),
-                  ),
-                );
-              },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Center(

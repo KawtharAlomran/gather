@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'Pages/login_screen.dart';
-
 import 'package:gather/Pages/profile_screen.dart';
 import 'package:gather/Pages/place_voting_screen.dart';
-import 'package:gather/Pages/gathering_details_screen.dart';
-
 import 'package:gather/Pages/InvitationPage.dart';
 import 'package:gather/Pages/home_page.dart';
+import 'package:gather/Pages/TimePreference.dart';
+
 import 'theme/app_theme.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -27,8 +27,8 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfileScreen(),
         '/invitations': (context) => const InvitationPage(),
         '/place-voting': (context) => const PlaceVotingScreen(),
-        '/gathering-details': (context) => const GatheringDetailsScreen(),
         '/home': (context) => const HomePage(),
+        '/update-preferences': (context) => const TimePreferencePage(), // Placeholder for the preferences page
       },
     );
   }
