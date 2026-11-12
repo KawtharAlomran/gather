@@ -4,6 +4,7 @@ class User {
   final String lastName;
   final String email;
   final String? avatar;
+  final String passwordHash;
 
   const User({
     required this.id,
@@ -11,6 +12,7 @@ class User {
     required this.lastName,
     required this.email,
     this.avatar,
+    required this.passwordHash,
   });
 
   String get fullName => '$firstName $lastName';
@@ -23,6 +25,7 @@ class User {
       lastName: json['lastName'] as String,
       email: json['email'] as String,
       avatar: json['avatar'] as String?,
+      passwordHash: json['passwordHash'] as String,
     );
   }
 
@@ -34,6 +37,7 @@ class User {
       'lastName': lastName,
       'email': email,
       'avatar': avatar,
+      'passwordHash': passwordHash,
     };
   }
 }

@@ -1,12 +1,14 @@
 
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:crypto/crypto.dart';
 import '../../models/user_model.dart';
 
 // Defines the operations for accessing user data.
 abstract class UserRepository {
   Future<List<User>> getUsers();
   Future<User?> getUserById(String userId);
+  Future<User?> login(String email, String password);
 }
 
 // Temporary repository using local JSON data.
@@ -31,6 +33,9 @@ class MockUserRepository implements UserRepository {
         )
         .toList();
   }
+  String _hashPassword(String password) {
+    return sha256.convert(utf8.encode(password)).toString();
+  }
 
   @override
   Future<List<User>> getUsers() async {
@@ -50,6 +55,24 @@ class MockUserRepository implements UserRepository {
 
     return null;
   }
+  @override
+Future<User?> login(String email, String password) async {
+  await _loadUsers();
+
+  final enteredEmail = email.trim().toLowerCase();
+  final enteredPasswordHash = _hashPassword(password);
+
+  for (final user in _users!) {
+    final isSameEmail = user.email.toLowerCase() == enteredEmail;
+    final isSamePassword = user.passwordHash == enteredPasswordHash;
+
+    if (isSameEmail && isSamePassword) {
+      return user;
+    }
+  }
+
+  return null;
+}
 }
 
 // Example usage:

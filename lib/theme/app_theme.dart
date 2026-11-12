@@ -8,6 +8,12 @@ class AppTheme {
   static const Color secondaryColor = Color(0xFF55B6B2);
   static const Color successColor = Color(0xFFD7F3E3);
   static const Color textColor = Color(0xFF242424);
+  static const Color secondaryButtonColor = Color(0xFFF0EDE9);
+  static const Color secondaryButtonTextColor = Color(0xFF78716D);
+  static const Color successTextColor = Color(0xFF256B45);
+  static const Color errorColor = Color(0xFFF8DEDC);
+  static const Color errorTextColor = Color(0xFF9E302B);
+
 
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -37,6 +43,12 @@ class AppTheme {
       headlineMedium: TextStyle(
         color: textColor,
         fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+
+      titleMedium: TextStyle(
+        color: textColor,
+        fontSize: 18,
         fontWeight: FontWeight.bold,
       ),
       bodyLarge: TextStyle(color: textColor, fontSize: 16),

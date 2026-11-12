@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'dart:async';
+
+import '../theme/app_theme.dart';
+
 enum MessageType { success, error }
 
 class AppMessage extends StatelessWidget {
@@ -15,6 +19,7 @@ class AppMessage extends StatelessWidget {
   });
 
   static OverlayEntry? _currentOverlay;
+  static Timer? _dismissTimer;
 
   // Display a message at the top of the screen.
   static void show(
@@ -22,6 +27,10 @@ class AppMessage extends StatelessWidget {
     required String message,
     MessageType type = MessageType.success,
   }) {
+    // Cancel the timer of the previous message.
+    _dismissTimer?.cancel();
+    _dismissTimer = null;
+
     // Remove any previously displayed message.
     _currentOverlay?.remove();
     _currentOverlay?.dispose();
@@ -32,6 +41,9 @@ class AppMessage extends StatelessWidget {
 
     void closeMessage() {
       if (_currentOverlay != entry) return;
+
+      _dismissTimer?.cancel();
+      _dismissTimer = null;
 
       entry.remove();
       entry.dispose();
@@ -61,20 +73,20 @@ class AppMessage extends StatelessWidget {
 
     _currentOverlay = entry;
     overlay.insert(entry);
+    _dismissTimer = Timer(const Duration(seconds: 2), closeMessage);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final bool isSuccess = type == MessageType.success;
 
     final Color backgroundColor = isSuccess
-        ? colorScheme.primaryContainer
-        : colorScheme.errorContainer;
+        ? AppTheme.successColor
+        : AppTheme.errorColor;
 
     final Color foregroundColor = isSuccess
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onErrorContainer;
+        ? AppTheme.successTextColor
+        : AppTheme.errorTextColor;
 
     final IconData icon = isSuccess
         ? Icons.check_circle_outline

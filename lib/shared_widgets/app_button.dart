@@ -6,6 +6,7 @@ class AppButton extends StatelessWidget {
   final bool isLoading;
   final bool fullWidth;
   final Color? backgroundColor;
+  final Color? foregroundColor;
 
   const AppButton({
     super.key,
@@ -14,6 +15,7 @@ class AppButton extends StatelessWidget {
     this.isLoading = false,
     this.fullWidth = true,
     this.backgroundColor,
+    this.foregroundColor,
   });
 
   @override
@@ -28,7 +30,8 @@ class AppButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor:
               backgroundColor ?? theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
+          foregroundColor: 
+              foregroundColor ?? theme.colorScheme.onPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),

@@ -23,7 +23,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   Widget pageForTab(int index) {
     switch (index) {
       case 0:
-        return const InvitationPage();
+        return  InvitationPage();
       case 1:
         return const HomePage();
       case 2:
