@@ -12,10 +12,8 @@ class CreatorGatheringPage extends StatefulWidget {
   final VoidCallback onUpdatePreferences;
   final VoidCallback? onViewAttendance;
   final ValueChanged<GatheringModel>? onChanged;
-
   /// Parent must remove this gathering from its Home data source.
   final Future<void> Function(GatheringModel)? onLeaveGathering;
-
   /// Supply actual attendee names from your repository; count alone is insufficient.
   final List<String> attendeeNames;
 
@@ -45,11 +43,7 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
   Future<void> _leave() async {
     if (!await confirmLeaveGathering(context) || !mounted) return;
     if (widget.onLeaveGathering == null) {
-      AppMessage.show(
-        context,
-        message: 'Connect the leave action to your Home data source first.',
-        type: MessageType.error,
-      );
+      AppMessage.show(context, message: 'Connect the leave action to your Home data source first.', type: MessageType.error);
       return;
     }
     try {
@@ -57,11 +51,7 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted) {
-        AppMessage.show(
-          context,
-          message: 'Could not leave the gathering. Please try again.',
-          type: MessageType.error,
-        );
+        AppMessage.show(context, message: 'Could not leave the gathering. Please try again.', type: MessageType.error);
       }
     }
   }
@@ -86,18 +76,9 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
                   const SizedBox(height: 18),
                   GatheringAttendanceCard(
                     count: gathering.attendingCount,
-                    subtitle: gathering.votingEnded
-                        ? 'Date voting ended'
-                        : 'Planning continues',
-                    onTap:
-                        widget.onViewAttendance ??
-                        () => openAttendance(
-                          context,
-                          widget.attendeeNames.isNotEmpty
-                              ? widget.attendeeNames
-                              : gathering.attendeeNames,
-                          gatheringId: gathering.id,
-                        ),
+                    subtitle: gathering.votingEnded ? 'Date voting ended' : 'Planning continues',
+                    onTap: widget.onViewAttendance ??
+                        () => openAttendance(context, widget.attendeeNames.isNotEmpty ? widget.attendeeNames : gathering.attendeeNames, gatheringId: gathering.id),
                   ),
                   const SizedBox(height: 16),
                   AppCard(
@@ -119,9 +100,7 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
                           ),
                         AppButton(
                           text: 'End Voting',
-                          onPressed:
-                              gathering.votingEnded ||
-                                  gathering.dateOptions.isEmpty
+                          onPressed: gathering.votingEnded || gathering.dateOptions.isEmpty
                               ? null
                               : _endVoting,
                         ),
@@ -129,16 +108,10 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  if (gathering.votingEnded)
-                    AppButton(
-                      text: 'Place voting',
-                      onPressed: widget.onPlaceVoting,
-                    )
-                  else
-                    AppButton(
-                      text: 'Update My Preferences',
-                      onPressed: widget.onUpdatePreferences,
-                    ),
+                  if (gathering.status != 'confirmed' && gathering.dateTime == null && gathering.votingEnded)
+                    AppButton(text: 'Place voting', onPressed: widget.onPlaceVoting)
+                  else if (gathering.status != 'confirmed' && gathering.dateTime == null)
+                    AppButton(text: 'Update My Preferences', onPressed: widget.onUpdatePreferences),
                 ],
               ),
             ),

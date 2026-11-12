@@ -80,7 +80,7 @@ class InviteeGatheringPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  AppButton(
+                  if (gathering.status != 'confirmed' && gathering.dateTime == null) AppButton(
                     text: 'Place voting',
                     onPressed: () {
                       Navigator.push(

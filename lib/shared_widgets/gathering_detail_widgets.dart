@@ -4,6 +4,7 @@ import 'app_dialog.dart';
 import '../models/attendee_model.dart';
 import '../data/repositories/attendance_repository.dart';
 
+/// Set this to your own asset path after adding it to pubspec.yaml.
 const String gatheringHeaderAsset = 'assets/images/background.png';
 
 class GatheringHeader extends StatelessWidget {
@@ -17,6 +18,8 @@ class GatheringHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
+          // YOUR IMAGE: replace gatheringHeaderAsset above with your asset path.
+          // The fallback avoids an error until the image is added.
           Image.asset(
             gatheringHeaderAsset,
             fit: BoxFit.cover,
@@ -31,7 +34,7 @@ class GatheringHeader extends StatelessWidget {
               backgroundColor: Theme.of(context).colorScheme.surface,
               child: IconButton(
                 tooltip: 'Back',
-                icon: const Icon(Icons.arrow_back),
+                icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -41,7 +44,7 @@ class GatheringHeader extends StatelessWidget {
             right: 12,
             child: PopupMenuButton<String>(
               tooltip: 'Gathering options',
-              icon: const Icon(Icons.more_vert),
+              icon: Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurface),
               color: Theme.of(context).colorScheme.surface,
               onSelected: (value) {
                 if (value == 'leave') onLeave();

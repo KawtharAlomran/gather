@@ -47,13 +47,11 @@ class _HomePageState extends State<HomePage> {
       gathering: gathering,
       currentUserId: currentUserId,
       onPlaceVoting: () {
-        Navigator.of(context, rootNavigator: true).pushNamed('/place-voting');
-      },
+        Navigator.of(context, rootNavigator: true)
+            .pushNamed('/place-voting');      },
       onUpdatePreferences: () {
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushNamed('/update-preferences');
+        Navigator.of(context, rootNavigator: true)
+            .pushNamed('/update-preferences');
       },
       onChanged: (_) => setState(() {}),
       onLeaveGathering: _leaveGathering,
@@ -82,7 +80,9 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
+                ),
               );
             },
           ),
@@ -98,113 +98,79 @@ class _HomePageState extends State<HomePage> {
             return const Center(child: Text('Failed to load gatherings'));
           }
           final all = snapshot.data ?? <GatheringModel>[];
-          final filtered = all
-              .where(
-                (g) => g.title.toLowerCase().contains(_search.toLowerCase()),
-              )
-              .toList();
-          final confirmed = filtered
-              .where((g) => g.status == 'confirmed' || g.dateTime != null)
-              .toList();
-          final planning = filtered
-              .where((g) => g.status != 'confirmed' && g.dateTime == null)
-              .toList();
+          final filtered = all.where((g) => g.title.toLowerCase().contains(_search.toLowerCase())).toList();
+          final confirmed = filtered.where((g) => g.status == 'confirmed' || g.dateTime != null).toList();
+          final planning = filtered.where((g) => g.status != 'confirmed' && g.dateTime == null).toList();
           final theme = Theme.of(context);
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text('Good morning 👋', style: theme.textTheme.bodySmall),
-              Text('Hey, welcome back!', style: theme.textTheme.headlineSmall),
-              const SizedBox(height: 20),
-              AppSearchField(
-                hintText: 'Search gatherings...',
-                onChanged: (value) => setState(() => _search = value),
-              ),
-              const SizedBox(height: 24),
-              Text('Upcoming Events', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              if (confirmed.isEmpty) const Text('No confirmed gatherings'),
-              if (confirmed.isNotEmpty)
-                SizedBox(
-                  height: 175,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: confirmed.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (context, i) {
-                      final g = confirmed[i];
-                      return SizedBox(
-                        width: 235,
-                        child: AppCard(
-                          onTap: () => _openGathering(g),
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'CONFIRMED',
-                                style: theme.textTheme.labelSmall,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                g.title,
-                                style: theme.textTheme.titleMedium,
-                                maxLines: 2,
-                              ),
-                              const Spacer(),
-                              if (g.dateTime != null)
-                                Text(
-                                  MaterialLocalizations.of(context)
-                                      .formatMediumDate(g.dateTime!.toLocal()),
-                                ),
-                              Text(
-                                g.place ?? 'Place not specified',
-                                maxLines: 1,
-                              ),
-                              Text('${g.attendingCount} attending'),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              const SizedBox(height: 24),
-              Text('Planning in Progress', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              if (planning.isEmpty) const Text('No gatherings in progress'),
-              for (final g in planning)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+          return ListView(padding: const EdgeInsets.all(20), children: [
+            Text('Good morning 👋', style: theme.textTheme.bodySmall),
+            Text('Hey, welcome back!', style: theme.textTheme.headlineSmall),
+            const SizedBox(height: 20),
+            AppSearchField(
+              hintText: 'Search gatherings...',
+              onChanged: (value) => setState(() => _search = value),
+            ),
+            const SizedBox(height: 24),
+            Text('Upcoming Events', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (confirmed.isEmpty) const Text('No confirmed gatherings'),
+            if (confirmed.isNotEmpty) SizedBox(height: 175, child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: confirmed.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) {
+                final g = confirmed[i];
+                return SizedBox(
+                  width: 235,
                   child: AppCard(
                     onTap: () => _openGathering(g),
-                    child: Row(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.event_available_outlined),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(g.title, style: theme.textTheme.titleMedium),
-                              Text(
-                                'Planning continues · ${g.planningProgress}%',
-                              ),
-                              const SizedBox(height: 5),
-                              LinearProgressIndicator(
-                                value: g.planningProgress.clamp(0, 100) / 100,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.chevron_right),
+                        Text('CONFIRMED', style: theme.textTheme.labelSmall),
+                        const SizedBox(height: 12),
+                        Text(g.title, style: theme.textTheme.titleMedium, maxLines: 2),
+                        const Spacer(),
+                        if (g.dateTime != null)
+                          Text(MaterialLocalizations.of(context).formatMediumDate(g.dateTime!.toLocal())),
+                        Text(g.place ?? 'Place not specified', maxLines: 1),
+                        Text('${g.attendingCount} attending'),
                       ],
                     ),
                   ),
+                );
+              },
+            )),
+            const SizedBox(height: 24),
+            Text('Planning in Progress', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (planning.isEmpty) const Text('No gatherings in progress'),
+            for (final g in planning) Padding(padding: const EdgeInsets.only(bottom: 10),
+              child: AppCard(
+                onTap: () => _openGathering(g),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_available_outlined),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(g.title, style: theme.textTheme.titleMedium),
+                          Text('Planning continues · ${g.planningProgress}%'),
+                          const SizedBox(height: 5),
+                          LinearProgressIndicator(value: g.planningProgress.clamp(0, 100) / 100),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right),
+                  ],
                 ),
-            ],
-          );
+              ),
+            ),
+          ]);
         },
       ),
       floatingActionButton: SizedBox(
