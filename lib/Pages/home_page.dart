@@ -151,8 +151,6 @@ class _HomePageState extends State<HomePage> {
                 onTap: () => _openGathering(g),
                 child: Row(
                   children: [
-                    const Icon(Icons.event_available_outlined),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
