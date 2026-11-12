@@ -101,16 +101,28 @@ class _TimePreferenceScreenState
                   ),
                   calendarStyle: CalendarStyle(
                     outsideDaysVisible: true,
-                    selectedDecoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
+
                     todayDecoration: BoxDecoration(
                       color: Colors.transparent,
                       border: Border.all(
                         color: Theme.of(context).colorScheme.primary,
                       ),
                       shape: BoxShape.circle,
+                    ),
+
+                    todayTextStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.normal,
+                    ),
+
+                    selectedDecoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+
+                    selectedTextStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

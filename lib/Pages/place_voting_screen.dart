@@ -16,6 +16,19 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
 
   List<Place> places = [];
   String? votedPlaceId;
+  
+  Widget _emptyImage() {
+    return Container(
+      width: 80,
+      height: 80,
+      color: Colors.grey.shade200,
+      child: Icon(
+        Icons.image_outlined,
+        size: 32,
+        color: Colors.grey.shade500,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -92,23 +105,27 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
   Widget buildPlaceCard(Place place) {
     final bool isVoted = votedPlaceId == place.id;
     final colors = Theme.of(context).colorScheme;
+    final imagePath = place.image;
 
     return AppCard(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          if (place.image != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                place.image!,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
+          ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: imagePath != null && imagePath.isNotEmpty
+              ? Image.asset(
+                  imagePath,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _emptyImage();
+                  },
+                )
+              : _emptyImage(),
+        ),
+        const SizedBox(width: 12),
 
           Expanded(
             child: Column(
