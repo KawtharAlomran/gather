@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/gathering_model.dart';
 import '../Pages/gathering_details_screen.dart';
 import '../Pages/invitee_gather_details_screen.dart';
-import '../Pages/confirmed_gathering_page.dart';
+import '../Pages/confirmed_gather_page.dart';
 
 /// Opens the correct gathering details page based on the current user's role.
 Future<void> openGatheringDetails({
