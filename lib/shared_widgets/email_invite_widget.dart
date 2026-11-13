@@ -124,7 +124,7 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: filteredEmails.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final email = filteredEmails[index];

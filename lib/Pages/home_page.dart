@@ -12,6 +12,7 @@ import '../shared_widgets/app_card.dart';
 import '../shared_widgets/app_message.dart';
 import '../shared_widgets/app_search_field.dart';
 import '../states/notification_read_state.dart';
+import '../Navigation/BottomNavigation.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -98,17 +99,12 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfileScreen(),
-                ),
-              );
-            },
-          ),
+IconButton(
+  icon: const Icon(Icons.account_circle_outlined),
+  onPressed: () {
+    BottomNavigation.selectTab(context, 2);
+  },
+),
         ],
       ),
       body: FutureBuilder<List<GatheringModel>>(
@@ -140,7 +136,7 @@ class _HomePageState extends State<HomePage> {
             if (confirmed.isNotEmpty) SizedBox(height: 175, child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: confirmed.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, i) {
                 final g = confirmed[i];
                 return SizedBox(

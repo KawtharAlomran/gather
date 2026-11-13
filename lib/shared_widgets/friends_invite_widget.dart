@@ -106,7 +106,7 @@ class _FriendsInviteWidgetState
         Expanded(
           child: ListView.separated(
             itemCount: filteredFriends.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final friend = filteredFriends[index];

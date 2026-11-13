@@ -92,7 +92,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                     )
                   : ListView.separated( // Display the list of places with voting buttons
                       itemCount: places.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const SizedBox(height: 12),
                       itemBuilder: (context, index) { // Build each place card in the list
                         return buildPlaceCard(places[index]);

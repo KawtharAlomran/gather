@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import '../Pages/home_page.dart';
 import '../Pages/InvitationPage.dart';
@@ -7,12 +6,22 @@ import '../Pages/profile_screen.dart';
 class BottomNavigation extends StatefulWidget {
   const BottomNavigation({super.key});
 
+  static void selectTab(BuildContext context, int index) {
+    context
+        .findAncestorStateOfType<_BottomNavigationState>()
+        ?._selectTab(index);
+  }
+
   @override
   State<BottomNavigation> createState() => _BottomNavigationState();
 }
 
 class _BottomNavigationState extends State<BottomNavigation> {
   int selectedIndex = 1;
+
+  void _selectTab(int index) {
+    setState(() => selectedIndex = index);
+  }
 
   final List<GlobalKey<NavigatorState>> navigatorKeys = [
     GlobalKey<NavigatorState>(),
@@ -23,7 +32,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   Widget pageForTab(int index) {
     switch (index) {
       case 0:
-        return  InvitationPage();
+        return InvitationPage();
       case 1:
         return const HomePage();
       case 2:
@@ -55,27 +64,22 @@ class _BottomNavigationState extends State<BottomNavigation> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() => selectedIndex = index);
-        },
+        onDestinationSelected: _selectTab,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.mail_outline),
             label: 'Invitations',
-              tooltip: '',
-
+            tooltip: '',
           ),
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             label: 'Home',
-              tooltip: '',
-
+            tooltip: '',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
             label: 'Profile',
-              tooltip: '',
-
+            tooltip: '',
           ),
         ],
       ),

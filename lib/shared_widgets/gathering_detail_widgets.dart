@@ -26,7 +26,7 @@ class GatheringHeader extends StatelessWidget {
           Image.asset(
             gatheringHeaderAsset,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
             ),
           ),
