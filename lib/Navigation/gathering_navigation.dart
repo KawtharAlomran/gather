@@ -22,8 +22,12 @@ Future<void> openGatheringDetails({
   await Navigator.of(context).push(
     MaterialPageRoute<void>(
       // Confirmed gatherings use their summary page regardless of creator.
-      builder: (_) => (gathering.status == 'confirmed' || gathering.dateTime != null)
-          ? ConfirmedGatheringPage(gathering: gathering, onLeaveGathering: onLeaveGathering)
+      builder: (_) =>
+          (gathering.status == 'confirmed' || gathering.dateTime != null)
+          ? ConfirmedGatheringPage(
+              gathering: gathering,
+              onLeaveGathering: onLeaveGathering,
+            )
           // Planning controls are shown only on the creator's page.
           : gathering.creatorId == currentUserId
           ? CreatorGatheringPage(

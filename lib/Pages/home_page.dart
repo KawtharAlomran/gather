@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
 import 'NotificationPage.dart';
-import 'profile_screen.dart';
 import 'create_gathering_screen.dart';
+import 'profile_screen.dart';
 
 import '../data/repositories/gathering_details_repository.dart';
 import '../models/gathering_model.dart';
-import '../navigation/gathering_navigation.dart';
+import '../Navigation/gathering_navigation.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_card.dart';
-import '../shared_widgets/app_search_field.dart';
 import '../shared_widgets/app_message.dart';
+import '../shared_widgets/app_search_field.dart';
+import '../states/notification_read_state.dart';
+// import 'create_gathering_screen.dart';
+// import 'NotificationPage.dart';
+// import 'profile_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -39,6 +43,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _gatheringsFuture = loadGatherings();
+    NotificationReadState.load();
   }
 
   void _openGathering(GatheringModel gathering) {
@@ -65,7 +70,28 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Home'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: ValueListenableBuilder<Set<String>>(
+              valueListenable: NotificationReadState.unreadKeys,
+              builder: (context, unread, _) => Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications_outlined),
+                  if (unread.isNotEmpty)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             onPressed: () {
               Navigator.push(
                 context,

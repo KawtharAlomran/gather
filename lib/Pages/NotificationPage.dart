@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../models/notification_model.dart';
 import '../shared_widgets/app_card.dart';
+import '../states/notification_read_state.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -20,13 +21,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
   void initState() {
     super.initState();
     _notifications = _loadNotifications();
+    NotificationReadState.load();
   }
 
   Future<List<NotificationModel>> _loadNotifications() async {
     final data = await rootBundle.loadString('lib/data/notification.json');
+    final decoded = jsonDecode(data);
 
-    return (jsonDecode(data) as List)
-        .map((item) => NotificationModel.fromJson(item as Map<String, dynamic>))
+    if (decoded is! List) {
+      throw const FormatException('Notification data must be a JSON list.');
+    }
+
+    return decoded
+        .map((item) => NotificationModel.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ))
         .toList();
   }
 
@@ -82,17 +91,42 @@ class _NotificationsPageState extends State<NotificationsPage> {
               children: [
                 for (final notification in snapshot.data!)
                   AppCard(
+                    onTap: () {
+                      NotificationReadState.markRead(
+                        notification.heading,
+                        notification.date,
+                      );
+                      setState(() {});
+                    },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Expanded(child: Text(notification.heading)),
+                            Expanded(child: Row(
+                              children: [
+                                if (NotificationReadState.isUnread(
+                                  notification.heading,
+                                  notification.date,
+                                )) ...[
+                                  const Icon(Icons.circle, color: Colors.red, size: 9),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(child: Text(notification.heading)),
+                              ],
+                            )),
                             Text(timeAgo(notification.date)),
                             IconButton(
                               onPressed: () {
+                                NotificationReadState.markRead(
+                                  notification.heading,
+                                  notification.date,
+                                );
                                 setState(() {
-                                  snapshot.data!.remove(notification);
+                                  final remaining = List<NotificationModel>.of(
+                                    snapshot.data!,
+                                  )..remove(notification);
+                                  _notifications = Future.value(remaining);
                                 });
                               },
                               tooltip: 'Remove notification',
