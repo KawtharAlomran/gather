@@ -2,16 +2,19 @@
   {
     "heading": "Voting is open",
     "caption": "You can now vote for the preferred place.",
-    "date": "2026-11-11T12:00:00Z"
+    "date": "2026-11-11T12:00:00Z",
+    "isRead": false
   },
   {
     "heading": "Time and date confirmed",
     "caption": "The time and date have been confirmed.",
-    "date": "2026-11-08T12:00:00Z"
+    "date": "2026-11-08T12:00:00Z",
+    "isRead": true
   },
   {
     "heading": "Voting is open",
     "caption": "You can now vote for the preferred place.",
-    "date": "2026-11-04T12:00:00Z"
+    "date": "2026-11-04T12:00:00Z",
+    "isRead": true
   }
 ]

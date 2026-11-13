@@ -1,3 +1,7 @@
+// Contains reusable UI components shared across gathering details pages.
+// Ensures consistent design and reduces duplicated code
+// for the header, attendance display, and confirmation dialog.
+
 import 'package:flutter/material.dart';
 import 'app_card.dart';
 import 'app_dialog.dart';
@@ -18,8 +22,7 @@ class GatheringHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // YOUR IMAGE: replace gatheringHeaderAsset above with your asset path.
-          // The fallback avoids an error until the image is added.
+
           Image.asset(
             gatheringHeaderAsset,
             fit: BoxFit.cover,

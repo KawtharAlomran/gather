@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'signup_page.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_text_field.dart';
-import 'BottomNavigation.dart';
+import '../Navigation/BottomNavigation.dart';
 import '../data/repositories/user_repository.dart';
 import '../shared_widgets/app_message.dart';
 

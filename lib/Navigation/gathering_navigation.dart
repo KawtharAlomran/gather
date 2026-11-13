@@ -1,3 +1,7 @@
+// Centralizes navigation to the appropriate gathering details page.
+// Determines whether the current user is the creator or an invitee
+// and opens the corresponding page based on their role.
+
 import 'package:flutter/material.dart';
 
 import '../models/gathering_model.dart';
@@ -5,7 +9,7 @@ import '../Pages/gathering_details_screen.dart';
 import '../Pages/invitee_gather_details_screen.dart';
 import '../Pages/confirmed_gather_page.dart';
 
-/// Opens the correct gathering details page based on the current user's role.
+/// Opens the confirmed summary, or the role-specific page while planning.
 Future<void> openGatheringDetails({
   required BuildContext context,
   required GatheringModel gathering,
@@ -17,8 +21,14 @@ Future<void> openGatheringDetails({
 }) async {
   await Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => (gathering.status == 'confirmed' || gathering.dateTime != null)
-          ? ConfirmedGatheringPage(gathering: gathering, onLeaveGathering: onLeaveGathering)
+      // Confirmed gatherings use their summary page regardless of creator.
+      builder: (_) =>
+          (gathering.status == 'confirmed' || gathering.dateTime != null)
+          ? ConfirmedGatheringPage(
+              gathering: gathering,
+              onLeaveGathering: onLeaveGathering,
+            )
+          // Planning controls are shown only on the creator's page.
           : gathering.creatorId == currentUserId
           ? CreatorGatheringPage(
               gathering: gathering,

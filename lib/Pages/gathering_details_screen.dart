@@ -1,3 +1,7 @@
+// Displays gathering details for the creator.
+// Allows the creator to manage date voting, view attendance,
+// and update gathering preferences.
+
 import 'package:flutter/material.dart';
 
 import '../models/gathering_model.dart';
