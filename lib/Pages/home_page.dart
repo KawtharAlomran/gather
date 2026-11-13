@@ -12,9 +12,6 @@ import '../shared_widgets/app_card.dart';
 import '../shared_widgets/app_message.dart';
 import '../shared_widgets/app_search_field.dart';
 import '../states/notification_read_state.dart';
-// import 'create_gathering_screen.dart';
-// import 'NotificationPage.dart';
-// import 'profile_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
