@@ -180,7 +180,7 @@ class _HomePageState extends State<HomePage> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const CreateGathering()),
+              MaterialPageRoute(builder: (context) =>  CreateGathering()),
             );
           },
         ),
