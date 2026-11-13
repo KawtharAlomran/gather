@@ -45,20 +45,61 @@ class _FriendsInviteWidgetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        
         TextField(
+          style: Theme.of(context).textTheme.bodyMedium,
           decoration: InputDecoration(
             hintText: 'Search friends',
-            prefixIcon: const Icon(Icons.search),
+            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+
+            prefixIcon: Icon(
+              Icons.search,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 44,
+            ),
+
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surface,
+
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
+
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
             ),
-          ),
-          onChanged: (value) {
-            setState(() {
-              searchText = value;
-            });
-          },
-        ),
+
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(
+        color: Theme.of(context).colorScheme.primary,
+        width: 1,
+      ),
+    ),
+  ),
+
+  onChanged: (value) {
+    setState(() {
+      searchText = value;
+    });
+  },
+),
+
 
         const SizedBox(height: 12),
 
