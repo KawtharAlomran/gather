@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'login_screen.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_text_field.dart';
@@ -11,14 +12,17 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
+  // Identifies and validates the sign up form.
   final _formKey = GlobalKey<FormState>();
 
+  // Store the values entered in the sign up fields.
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Release all text controllers when the screen is removed.
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -30,16 +34,17 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  // Validate the form and return to Login after successful validation.
   void _signUp() {
-  if (_formKey.currentState!.validate()) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const LoginPage(),
-      ),
-    );
+    // Continue only when all fields contain valid input.
+    if (_formKey.currentState!.validate()) {
+      // Return to the login screen after sign up validation.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -62,12 +67,8 @@ class _SignUpPageState extends State<SignUpPage> {
                 Text(
                   'Gather!',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineLarge
-                      ?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                  style: Theme.of(context).textTheme.headlineLarge
+                      ?.copyWith(color: Theme.of(context).colorScheme.primary),
                 ),
 
                 const SizedBox(height: 40),
@@ -161,30 +162,26 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 24),
 
-              AppButton(
-                text: 'Sign Up',
-                onPressed: _signUp,
-              ),
+                AppButton(text: 'Sign Up', onPressed: _signUp),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Already have an account?'),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginPage(),
-                        ),
-                      );
-                    },
-                    child: const Text('Log in'),
-                  ),
-                ],
-              ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Already have an account?'),
+                    TextButton(
+                      // Return to the login screen for existing users.
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
+                      },
+                      child: const Text('Log in'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
