@@ -91,9 +91,7 @@ class Gathering {
   }
 }
 
-// --------------------------------------------------
 // GatheringModel - Gathering details and voting
-// --------------------------------------------------
 
 class GatheringModel {
   final String id;
@@ -225,9 +223,7 @@ class GatheringModel {
   };
 }
 
-// --------------------------------------------------
 // DateOptionModel - Date voting options
-// --------------------------------------------------
 
 class DateOptionModel {
   final String id;

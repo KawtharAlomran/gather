@@ -156,16 +156,6 @@ class _CreateGatheringState extends State<CreateGathering> {
       return;
     }
 
-    // TODO: Create a GatheringDraft and pass all form data
-    // to TimePreferenceScreen once its constructor supports it.
-    //
-    // Data to pass:
-    // _nameController.text.trim()
-    // _startDate, _endDate
-    // _budgetRange.start, _budgetRange.end
-    // _activities
-    // _selectedFriendIds
-    // _selectedEmails
 
     Navigator.push(
       context,

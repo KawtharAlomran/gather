@@ -96,19 +96,3 @@ class MockInvitationRepository implements InvitationRepository {
   }
 }
 
-// Example usage:
-//
-// final repository = MockInvitationRepository();
-//
-// final invitations = await repository.getInvitations();
-//
-// final accepted = await repository.acceptInvitation('inv_1');
-//
-// final declined = await repository.declineInvitation('inv_2');
-//
-// Notes:
-// - Invitation data is loaded from lib/data/invitations.json.
-// - JSON data is loaded once per repository instance.
-// - Accepting or declining updates the in-memory list.
-// - Changes are not persisted after the repository is recreated.
-// - The repository can be used with BLoC, Cubit, or Provider.

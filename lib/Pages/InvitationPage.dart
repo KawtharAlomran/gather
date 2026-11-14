@@ -171,7 +171,6 @@ class _InvitationPageState extends State<InvitationPage> {
         children: [
           Row(
             children: [
-              // TODO: Use a cached profile image when available.
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Theme.of(context)

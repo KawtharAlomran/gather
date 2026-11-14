@@ -75,16 +75,3 @@ Future<User?> login(String email, String password) async {
 }
 }
 
-// Example usage:
-//
-// final repository = MockUserRepository();
-//
-// final users = await repository.getUsers();
-//
-// final user = await repository.getUserById('user_1');
-//
-// Notes:
-// - User data is shared across all screens.
-// - JSON is loaded once per repository instance.
-// - The repository can later use API and local caching.
-// - Compatible with BLoC, Cubit, or Provider.

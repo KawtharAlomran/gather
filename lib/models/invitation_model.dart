@@ -57,21 +57,3 @@ class InvitationModel {
   }
 }
 
-// Example usage:
-//
-// final invitation = InvitationModel(
-//   id: 'inv_1',
-//   gatheringId: 'gather_1',
-//   inviterId: 'user_1',
-// );
-//
-// final acceptedInvitation = invitation.copyWith(
-//   status: InvitationStatus.accepted,
-// );
-//
-// Notes:
-// - The inviter is identified using a unique user ID.
-// - Gathering details are retrieved using gatheringId.
-// - The model is immutable and supports copyWith.
-// - JSON conversion supports future API and caching.
-// - State management is handled outside the model.

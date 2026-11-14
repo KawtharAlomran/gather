@@ -100,24 +100,7 @@ class MockGatheringRepository implements GatheringRepository {
   }
 }
 
-// Example usage:
 //
-// final repository = MockGatheringRepository();
-//
-// final gatherings = await repository.getGatherings();
-//
-// final gathering = await repository.getGatheringById('gather_1');
-//
-// final newGathering = Gathering(
-//   id: 'gather_3',
-//   title: 'Weekend Picnic',
-//   creatorEmail: 'nour@example.com',
-//   participantIds: ['user_1', 'user_2'],
-// );
-//
-// await repository.createGathering(newGathering);
-//
-// Notes:
 // - Gathering data is loaded from lib/data/gatherings.json.
 // - JSON data is loaded once per repository instance.
 // - Create, update, and delete operations modify in-memory data.

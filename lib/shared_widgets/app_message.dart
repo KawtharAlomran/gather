@@ -119,22 +119,7 @@ class AppMessage extends StatelessWidget {
   }
 }
 
-// Example 1: Success message (default)
-//
-// AppMessage.show(
-//   context,
-//   message: 'Invitation accepted successfully!',
-// );
-//
-// Example 2: Error message
-//
-// AppMessage.show(
-//   context,
-//   message: 'Something went wrong. Please try again.',
-//   type: MessageType.error,
-// );
-//
-// Notes:
+
 // - Messages appear automatically at the top of the screen.
 // - Success is the default message type.
 // - Only one message is displayed at a time.

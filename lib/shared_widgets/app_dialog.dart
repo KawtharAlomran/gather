@@ -108,29 +108,7 @@ class AppDialog extends StatelessWidget {
   }
 }
 
-// Example usage:
-//
-// showDialog(
-//   context: context,
-//   builder: (dialogContext) => AppDialog(
-//     title: 'Do you want to decline this gathering?',
-//     confirmText: 'Decline',
-//     cancelText: 'Back',
-//     cancelColor: Theme.of(dialogContext)
-//         .colorScheme.surfaceContainerHighest,
-//     cancelTextColor: Theme.of(dialogContext)
-//         .colorScheme.onSurface,
-//     confirmColor: Theme.of(dialogContext)
-//         .colorScheme.onSurface,
-//     confirmTextColor: Theme.of(dialogContext)
-//         .colorScheme.surface,
-//     onConfirm: () {
-//       Navigator.pop(dialogContext);
-//     },
-//   ),
-// );
-//
-// Notes:
+
 // - The X button closes the dialog without confirming.
 // - The dialog title uses titleMedium from the app theme.
 // - The message is optional.
