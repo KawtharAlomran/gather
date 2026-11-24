@@ -4,7 +4,6 @@ class User {
   final String lastName;
   final String email;
   final String? avatar;
-  final String passwordHash;
 
   const User({
     required this.id,
@@ -12,32 +11,30 @@ class User {
     required this.lastName,
     required this.email,
     this.avatar,
-    required this.passwordHash,
   });
 
   String get fullName => '$firstName $lastName';
 
-  // Create a user object from JSON data.
-  factory User.fromJson(Map<String, dynamic> json) {
+  factory User.fromMap(
+    Map<String, dynamic> data,
+    String documentId,
+  ) {
     return User(
-      id: json['id'] as String,
-      firstName: json['firstName'] as String,
-      lastName: json['lastName'] as String,
-      email: json['email'] as String,
-      avatar: json['avatar'] as String?,
-      passwordHash: json['passwordHash'] as String,
+      id: documentId,
+      firstName: data['firstName'] as String? ?? '',
+      lastName: data['lastName'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      avatar: data['avatar'] as String?,
     );
   }
 
   // Convert a user object into JSON.
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
       'avatar': avatar,
-      'passwordHash': passwordHash,
     };
   }
 }
