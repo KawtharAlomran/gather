@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/place_model.dart';
 
 abstract class PlaceRepository {
@@ -7,43 +6,51 @@ abstract class PlaceRepository {
   Future<Place?> getPlaceById(String placeId);
 }
 
-class MockPlaceRepository implements PlaceRepository {
-  List<Place>? _places;
-
-  Future<void> _loadPlaces() async {
-    if (_places != null) return;
-
-    final jsonString = await rootBundle.loadString(
-      'lib/data/places.json',
-    );
-
-    final List<dynamic> jsonData = jsonDecode(jsonString);
-
-    _places = jsonData
-        .map(
-          (item) => Place.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
-        .toList();
-  }
+class FirebasePlaceRepository implements PlaceRepository {
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
 
   @override
   Future<List<Place>> getPlaces() async {
-    await _loadPlaces();
-    return List.unmodifiable(_places!);
+    final snapshot =
+        await _firestore.collection('places').get();
+
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+
+      return Place.fromJson({
+        'id': data['id'] ?? doc.id,
+        'name': data['name'] ?? '',
+        'category': data['category'] ?? '',
+        'rating': data['rating'] ?? 0.0,
+        'reviewCount': data['reviewCount'] ?? 0,
+        'image': data['image'],
+        'address': data['address'] ?? '',
+        'googleMapsUrl': data['googleMapsUrl'],
+      });
+    }).toList();
   }
 
   @override
   Future<Place?> getPlaceById(String placeId) async {
-    await _loadPlaces();
+    final doc = await _firestore
+        .collection('places')
+        .doc(placeId)
+        .get();
 
-    for (final place in _places!) {
-      if (place.id == placeId) {
-        return place;
-      }
+    if (!doc.exists) {
+      return null;
     }
 
-    return null;
+    final data = doc.data()!;
+
+    return Place.fromJson({
+      'id': data['id'] ?? doc.id,
+      'name': data['name'] ?? '',
+      'category': data['category'] ?? '',
+      'rating': data['rating'] ?? 0.0,
+      'image': data['image'],
+    });
   }
+
 }
