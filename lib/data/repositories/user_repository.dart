@@ -27,8 +27,9 @@ class MockUserRepository implements UserRepository {
 
     _users = jsonData
         .map(
-          (item) => User.fromJson(
+          (item) => User.fromMap(
             item as Map<String, dynamic>,
+            (item['id'] as String?) ?? '',
           ),
         )
         .toList();
@@ -64,11 +65,11 @@ Future<User?> login(String email, String password) async {
 
   for (final user in _users!) {
     final isSameEmail = user.email.toLowerCase() == enteredEmail;
-    final isSamePassword = user.passwordHash == enteredPasswordHash;
+    //final isSamePassword = user.passwordHash == enteredPasswordHash;
 
-    if (isSameEmail && isSamePassword) {
-      return user;
-    }
+    // if (isSameEmail && isSamePassword) {
+    //   return user;
+    // }
   }
 
   return null;

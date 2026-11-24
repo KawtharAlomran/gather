@@ -33,8 +33,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
 
     return decoded
-        .map((item) => NotificationModel.fromJson(
+        .map((item) => NotificationModel.fromMap(
               Map<String, dynamic>.from(item as Map),
+              '',
             ))
         .toList();
   }
