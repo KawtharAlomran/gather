@@ -23,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   // Provides local user data for authentication.
-  final UserRepository _userRepository = MockUserRepository();
+  final UserRepository _userRepository = FirebaseUserRepository();
 
   // To show a loading state while login is being processed.
   bool isLoading = false;
