@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 
 import '../models/invitation_model.dart';
 import '../models/user_model.dart';
@@ -21,7 +23,7 @@ class InvitationPage extends StatefulWidget {
     InvitationRepository? invitationRepository,
     UserRepository? userRepository,
   }) : invitationRepository =
-           invitationRepository ?? MockInvitationRepository(),
+           invitationRepository ?? FirestoreInvitationRepository(),
        userRepository = userRepository ?? MockUserRepository();
 
   @override
@@ -36,6 +38,7 @@ class _InvitationPageState extends State<InvitationPage> {
   String? _error;
   String? _processingId;
 
+  // TODO: Replace with Firestore GatheringRepository.
   final Map<String, String> _gatheringTitles = {
     'gather_1': 'Cozy Soup Sunday',
     'gather_2': 'Nature Photography Hike',
@@ -47,15 +50,18 @@ class _InvitationPageState extends State<InvitationPage> {
     _loadData();
   }
 
-  // Load invitations and shared user data.
+  // Load invitations from Firestore and users from temporary repository.
   Future<void> _loadData() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final invitations = await widget.invitationRepository.getInvitations();
+      final invitations =
+          await widget.invitationRepository.getInvitations();
 
       final users = await widget.userRepository.getUsers();
 
@@ -63,11 +69,15 @@ class _InvitationPageState extends State<InvitationPage> {
 
       setState(() {
         _invitations = invitations;
-        _usersById = {for (final user in users) user.id: user};
+        _usersById = {
+          for (final user in users) user.id: user,
+        };
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
+
+      debugPrint('Invitation loading error: $e');
 
       setState(() {
         _error = 'Unable to load invitations.';
@@ -76,7 +86,7 @@ class _InvitationPageState extends State<InvitationPage> {
     }
   }
 
-  // Accept or decline an invitation.
+  // Accept or decline an invitation in Firestore.
   Future<void> _updateInvitation(
     InvitationModel invitation,
     InvitationStatus newStatus,
@@ -92,12 +102,17 @@ class _InvitationPageState extends State<InvitationPage> {
 
     try {
       if (newStatus == InvitationStatus.accepted) {
-        await widget.invitationRepository.acceptInvitation(invitation.id);
+        await widget.invitationRepository.acceptInvitation(
+          invitation.id,
+        );
       } else {
-        await widget.invitationRepository.declineInvitation(invitation.id);
+        await widget.invitationRepository.declineInvitation(
+          invitation.id,
+        );
       }
 
-      final updated = await widget.invitationRepository.getInvitations();
+      final updated =
+          await widget.invitationRepository.getInvitations();
 
       if (!mounted) return;
 
@@ -114,9 +129,11 @@ class _InvitationPageState extends State<InvitationPage> {
     } catch (e) {
       if (!mounted) return;
 
+      debugPrint('Invitation update error: $e');
+
       AppMessage.show(
         context,
-        message: 'Something went wrong. Please try again.',
+        message: 'Unable to update invitation. Please try again.',
         type: MessageType.error,
       );
     } finally {
@@ -128,10 +145,11 @@ class _InvitationPageState extends State<InvitationPage> {
     }
   }
 
-  // Show confirmation before declining.
-
+  // Show confirmation dialog before declining.
   void _confirmDecline(InvitationModel invitation) {
-    final title = _gatheringTitles[invitation.gatheringId] ?? 'this gathering';
+    final title =
+        _gatheringTitles[invitation.gatheringId] ??
+        'this gathering';
 
     showDialog(
       context: context,
@@ -139,31 +157,36 @@ class _InvitationPageState extends State<InvitationPage> {
         title: 'Do you want to decline the $title gathering?',
         confirmText: 'Decline',
         cancelText: 'Back',
-
-        // Use button colors from the app theme.
         cancelColor: AppTheme.secondaryButtonColor,
         cancelTextColor: AppTheme.secondaryButtonTextColor,
         confirmColor: AppTheme.textColor,
-        confirmTextColor: Theme.of(context).colorScheme.surface,
-
+        confirmTextColor:
+            Theme.of(context).colorScheme.surface,
         onConfirm: () {
           Navigator.pop(dialogContext);
-          _updateInvitation(invitation, InvitationStatus.declined);
+          _updateInvitation(
+            invitation,
+            InvitationStatus.declined,
+          );
         },
       ),
     );
   }
 
-  // Build each invitation card using shared components.
+  // Build invitation card using shared components.
   Widget _buildInvitationCard(InvitationModel invitation) {
     final inviter = _usersById[invitation.inviterId];
+
     final inviterName = inviter?.fullName ?? 'Unknown User';
 
     final gatheringTitle =
-        _gatheringTitles[invitation.gatheringId] ?? 'Gathering';
+        _gatheringTitles[invitation.gatheringId] ??
+        'Gathering';
 
     final isProcessing = _processingId == invitation.id;
     final isBusy = _processingId != null;
+
+    final theme = Theme.of(context);
 
     return AppCard(
       padding: const EdgeInsets.all(16),
@@ -171,14 +194,14 @@ class _InvitationPageState extends State<InvitationPage> {
         children: [
           Row(
             children: [
+              // TODO: Replace with cached profile image.
               CircleAvatar(
                 radius: 24,
-                backgroundColor: Theme.of(context)
-                    .colorScheme
-                    .secondaryContainer,
+                backgroundColor:
+                    theme.colorScheme.secondaryContainer,
                 child: Icon(
                   Icons.person_outline,
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: theme.colorScheme.secondary,
                 ),
               ),
 
@@ -190,13 +213,14 @@ class _InvitationPageState extends State<InvitationPage> {
                   children: [
                     Text(
                       'Invited by',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       inviterName,
-                      style: Theme.of(context).textTheme.bodyLarge
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -204,7 +228,7 @@ class _InvitationPageState extends State<InvitationPage> {
 
               Icon(
                 Icons.groups_outlined,
-                color: Theme.of(context).colorScheme.secondary,
+                color: theme.colorScheme.secondary,
               ),
             ],
           ),
@@ -216,7 +240,7 @@ class _InvitationPageState extends State<InvitationPage> {
           Text(
             gatheringTitle,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineMedium,
+            style: theme.textTheme.headlineMedium,
           ),
 
           const SizedBox(height: 24),
@@ -227,8 +251,13 @@ class _InvitationPageState extends State<InvitationPage> {
                 child: AppButton(
                   text: 'Decline',
                   fullWidth: true,
-                  backgroundColor: AppTheme.secondaryButtonColor,
-                  onPressed: isBusy ? null : () => _confirmDecline(invitation),
+                  backgroundColor:
+                      AppTheme.secondaryButtonColor,
+                  foregroundColor:
+                      AppTheme.secondaryButtonTextColor,
+                  onPressed: isBusy
+                      ? null
+                      : () => _confirmDecline(invitation),
                 ),
               ),
 
@@ -242,9 +271,9 @@ class _InvitationPageState extends State<InvitationPage> {
                   onPressed: isBusy
                       ? null
                       : () => _updateInvitation(
-                          invitation,
-                          InvitationStatus.accepted,
-                        ),
+                            invitation,
+                            InvitationStatus.accepted,
+                          ),
                 ),
               ),
             ],
@@ -256,14 +285,21 @@ class _InvitationPageState extends State<InvitationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     final pendingInvitations = _invitations
-        .where((invitation) => invitation.status == InvitationStatus.pending)
+        .where(
+          (invitation) =>
+              invitation.status == InvitationStatus.pending,
+        )
         .toList();
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    final theme = Theme.of(context);
 
-      // Bottom navigation is handled by BottomNavigation.
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+
+      // BottomNavigation is managed by the parent widget.
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -274,54 +310,79 @@ class _InvitationPageState extends State<InvitationPage> {
 
               Text(
                 'Invitations',
-                style: Theme.of(context).textTheme.headlineLarge,
+                style: theme.textTheme.headlineLarge,
               ),
 
               const SizedBox(height: 4),
 
               Text(
                 'Your friends want to hang out!',
-                style: Theme.of(context).textTheme.bodyLarge,
+                style: theme.textTheme.bodyLarge,
               ),
 
               const SizedBox(height: 24),
 
               Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_error!),
-                            const SizedBox(height: 12),
-                            AppButton(
-                              text: 'Retry',
-                              fullWidth: false,
-                              onPressed: _loadData,
-                            ),
-                          ],
-                        ),
-                      )
-                    : pendingInvitations.isEmpty
-                    ? Center(
+                child: currentUser == null
+                    ? const Center(
                         child: Text(
-                          'No pending invitations.',
-                          style: Theme.of(context).textTheme.bodyLarge,
+                          'Please log in to view your invitations.',
                         ),
                       )
-                    : ListView.builder(
-                        itemCount: pendingInvitations.length,
-                        itemBuilder: (context, index) {
-                          final invitation = pendingInvitations[index];
+                    : _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(),
+                          )
+                        : _error != null
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(_error!),
+                                    const SizedBox(height: 12),
+                                    AppButton(
+                                      text: 'Retry',
+                                      fullWidth: false,
+                                      onPressed: _loadData,
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _loadData,
+                                child: ListView.builder(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  itemCount: pendingInvitations.isEmpty
+                                      ? 1
+                                      : pendingInvitations.length,
+                                  itemBuilder: (context, index) {
+                                    if (pendingInvitations.isEmpty) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 80,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            'No pending invitations.',
+                                            style: theme.textTheme.bodyLarge,
+                                          ),
+                                        ),
+                                      );
+                                    }
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: _buildInvitationCard(invitation),
-                          );
-                        },
-                      ),
+                                    final invitation =
+                                        pendingInvitations[index];
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 16,
+                                      ),
+                                      child: _buildInvitationCard(invitation),
+                                    );
+                                  },
+                                ),
+                              ),
               ),
             ],
           ),
