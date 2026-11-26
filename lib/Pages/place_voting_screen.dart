@@ -4,38 +4,24 @@ import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import '../data/repositories/openstreetmap_repository.dart';
 
-
 class PlaceVotingScreen extends StatefulWidget {
   const PlaceVotingScreen({super.key});
 
   @override
-  State<PlaceVotingScreen> createState() => _PlaceVotingScreenState();
+  State<PlaceVotingScreen> createState() =>
+      _PlaceVotingScreenState();
 }
 
-class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
-
-  // Create an instance of the OpenStreetMapRepository to fetch places
-  final OpenStreetMapRepository placeRepository = OpenStreetMapRepository();
+class _PlaceVotingScreenState
+    extends State<PlaceVotingScreen> {
+  final OpenStreetMapRepository placeRepository =
+      OpenStreetMapRepository();
 
   final double userLatitude = 26.2235;
   final double userLongitude = 50.5876;
 
-  List<Place> places = []; // List to hold the loaded places
-  String? votedPlaceId; // Store the ID of the place the user has voted for
-  
-  // Widget to display a placeholder image when the actual image is not available
-  Widget _emptyImage() {
-    return Container(
-      width: 80,
-      height: 80,
-      color: Colors.grey.shade200,
-      child: Icon(
-        Icons.image_outlined,
-        size: 32,
-        color: Colors.grey.shade500,
-      ),
-    );
-  }
+  List<Place> places = [];
+  String? votedPlaceId;
 
   @override
   void initState() {
@@ -43,14 +29,13 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     loadPlaces();
   }
 
-  // Load the places from the repository
   Future<void> loadPlaces() async {
     try {
       final loadedPlaces =
-        await placeRepository.searchNearbyPlaces(
-          latitude: userLatitude,
-          longitude: userLongitude,
-        );
+          await placeRepository.searchNearbyPlaces(
+        latitude: userLatitude,
+        longitude: userLongitude,
+      );
 
       if (!mounted) return;
 
@@ -62,10 +47,10 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     }
   }
 
-  // Handle the voting action for a place
   void vote(String placeId) {
     setState(() {
-      votedPlaceId = votedPlaceId == placeId ? null : placeId; // Toggle vote for the selected place
+      votedPlaceId =
+          votedPlaceId == placeId ? null : placeId;
     });
   }
 
@@ -88,11 +73,14 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
           vertical: 16,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             Text(
               'Recommended for Group',
-              style: Theme.of(context).textTheme.headlineMedium,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium,
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -100,12 +88,14 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                   ? const Center(
                       child: CircularProgressIndicator(),
                     )
-                  : ListView.separated( // Display the list of places with voting buttons
+                  : ListView.separated(
                       itemCount: places.length,
                       separatorBuilder: (_, _) =>
                           const SizedBox(height: 12),
-                      itemBuilder: (context, index) { // Build each place card in the list
-                        return buildPlaceCard(places[index]);
+                      itemBuilder: (context, index) {
+                        return buildPlaceCard(
+                          places[index],
+                        );
                       },
                     ),
             ),
@@ -115,81 +105,114 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
     );
   }
 
-  // Build the UI for a single place card
   Widget buildPlaceCard(Place place) {
-    final bool isVoted = votedPlaceId == place.placeId;
-    final colors = Theme.of(context).colorScheme;
-    final imagePath = place.image;
+    final isVoted =
+        votedPlaceId == place.placeId;
+
+    final colors =
+        Theme.of(context).colorScheme;
 
     return AppCard(
-      padding: const EdgeInsets.all(12),
-      child: Row(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
-          // Display the place image or a placeholder if the image is not available
-          ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: imagePath != null && imagePath.isNotEmpty
-              ? Image.asset(
-                  imagePath,
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _emptyImage();
-                  },
-                )
-              : _emptyImage(), // Display placeholder image if the actual image is not available
-        ),
-        const SizedBox(width: 12),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor:
+                    colors.primaryContainer,
+                child: Icon(
+                  Icons.restaurant,
+                  color: colors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
                   place.name,
                   style: const TextStyle(
-                    fontSize: 17,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.star_border,
-                      size: 18,
-                      color: colors.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      place.rating.toString(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  place.category,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: AppButton(
-                    // Toggle the vote state for the place when the button is pressed
-                    // Update the button text and background color based on the vote state
-                    text: isVoted ? 'Voted' : 'Vote',
-                    fullWidth: false,
-                    backgroundColor:
-                        // Change the button color based on whether the user has voted for this place
-                        isVoted ? colors.primary : colors.secondary, 
-                    onPressed: () => vote(place.placeId),
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          if (place.cuisine != null &&
+              place.cuisine!.isNotEmpty)
+            _infoRow(
+              Icons.restaurant_menu,
+              place.cuisine!,
+            ),
+
+          if (place.address.isNotEmpty)
+            _infoRow(
+              Icons.location_on_outlined,
+              place.address,
+            ),
+
+          if (place.openingHours != null &&
+              place.openingHours!.isNotEmpty)
+            _infoRow(
+              Icons.access_time,
+              place.openingHours!,
+            ),
+
+          if (place.phone != null &&
+              place.phone!.isNotEmpty)
+            _infoRow(
+              Icons.phone_outlined,
+              place.phone!,
+            ),
+
+          if (place.outdoorSeating)
+            _infoRow(
+              Icons.deck_outlined,
+              'Outdoor seating available',
+            ),
+
+          const SizedBox(height: 12),
+
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppButton(
+              text: isVoted ? 'Voted' : 'Vote',
+              fullWidth: false,
+              backgroundColor: isVoted
+                  ? colors.primary
+                  : colors.secondary,
+              onPressed: () => vote(place.placeId),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: Colors.grey.shade700,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.grey.shade700,
+              ),
             ),
           ),
         ],
