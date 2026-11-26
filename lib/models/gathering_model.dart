@@ -98,6 +98,7 @@ class GatheringModel {
   final String title;
   final String createdBy;
   final String creatorId;
+  final List<String> participantIds;
   final int attendingCount;
   final String? place;
   final String status;
@@ -120,6 +121,7 @@ class GatheringModel {
     required this.title,
     required this.createdBy,
     required this.creatorId,
+    this.participantIds = const [],
     this.attendingCount = 0,
     this.place,
     this.status = 'planning',
@@ -154,6 +156,10 @@ class GatheringModel {
           json['createdBy'] as String? ??
           json['creatorEmail'] as String? ??
           '',
+
+      participantIds: (json['participantIds'] as List? ?? [])
+        .map((id) => id.toString())
+        .toList(),
       creatorId:
           json['creatorId'] as String? ??
           json['creatorEmail'] as String? ??
@@ -202,6 +208,7 @@ class GatheringModel {
     'title': title,
     'createdBy': createdBy,
     'creatorId': creatorId,
+    'participantIds': participantIds,
     'attendingCount': attendingCount,
     'place': place,
     'status': status,
