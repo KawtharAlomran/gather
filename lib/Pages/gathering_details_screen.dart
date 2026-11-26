@@ -3,6 +3,7 @@
 // and update gathering preferences.
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/vote_model.dart';
 import '../data/repositories/vote_repository.dart';
@@ -79,14 +80,37 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
       if (mounted) setState(() => _savingVote = false);
     }
   }
+Future<void> _endVoting() async {
+  final gathering = widget.gathering;
 
-  void _endVoting() {
-    final gathering = widget.gathering;
-    if (gathering.votingEnded) return;
-    setState(() => gathering.votingEnded = true);
+  if (gathering.votingEnded) return;
+
+  try {
+    await FirebaseFirestore.instance
+        .collection('gatherings')
+        .doc(gathering.id)
+        .update({
+      'votingEnded': true,
+    });
+
+    if (!mounted) return;
+
+    setState(() {
+      gathering.votingEnded = true;
+    });
+
     widget.onChanged?.call(gathering);
-  }
 
+  } catch (e) {
+    if (!mounted) return;
+
+    AppMessage.show(
+      context,
+      message: 'Could not end voting: $e',
+      type: MessageType.error,
+    );
+  }
+}
   Future<void> _leave() async {
     if (!await confirmLeaveGathering(context) || !mounted) return;
     if (widget.onLeaveGathering == null) {
