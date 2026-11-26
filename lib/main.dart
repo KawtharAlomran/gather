@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
         //'/invitations': (context) => const InvitationPage(),
         '/place-voting': (context) => const PlaceVotingScreen(),
         '/home': (context) => const HomePage(),
-        '/update-preferences': (context) => const TimePreferenceScreen(), // Placeholder for the preferences page
+        //'/update-preferences': (context) => const TimePreferenceScreen(), // Placeholder for the preferences page
       },
     );
   }

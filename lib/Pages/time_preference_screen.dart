@@ -20,7 +20,6 @@ class TimePreferenceScreen extends StatefulWidget {
 
 class _TimePreferenceScreenState
     extends State<TimePreferenceScreen> {
-  DateTime focusedDay = DateTime.now(); // The currently focused day in the calendar
   DateTime? selectedDay; // The currently selected day in the calendar
   final Set<DateTime> selectedDates = {}; // Stores the selected dates
 
@@ -31,6 +30,32 @@ class _TimePreferenceScreenState
 
   List<String> get activities =>
       widget.gathering.activities;
+
+  late DateTime firstCalendarDay;
+  late DateTime lastCalendarDay;
+  late DateTime focusedDay;
+
+  DateTime _dateOnly(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    firstCalendarDay = _dateOnly(
+      widget.gathering.startDate ?? DateTime.now(),
+    );
+
+    lastCalendarDay = _dateOnly(
+      widget.gathering.endDate ??
+          firstCalendarDay.add(
+            const Duration(days: 365),
+          ),
+    );
+
+    focusedDay = firstCalendarDay;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,28 +82,27 @@ class _TimePreferenceScreenState
               AppCard(
                 padding: const EdgeInsets.all(8),
                 child: TableCalendar(
-                  firstDay: widget.gathering.startDate ??
-                  DateTime.now(),
-                  lastDay: widget.gathering.endDate ??
-                  DateTime.now().add(
-                    const Duration(days: 365),
-                  ),
+                  firstDay: firstCalendarDay,
+
+                  lastDay: lastCalendarDay,
+
                   focusedDay: focusedDay,
+
                   calendarFormat: CalendarFormat.month,
+
                   availableCalendarFormats: const {
                     CalendarFormat.month: 'Month',
                   },
+
                   selectedDayPredicate: (day) {
                     return selectedDates.any(
                       (date) => isSameDay(date, day),
                     );
                   },
 
-                  // When a day is selected, update the selectedDay and focusedDay
                   onDaySelected: (day, newFocusedDay) {
                     setState(() {
                       focusedDay = newFocusedDay;
-                      selectedDay = day;
 
                       DateTime? existingDate;
 
@@ -94,43 +118,13 @@ class _TimePreferenceScreenState
                         selectedTimes.remove(existingDate);
                       } else {
                         selectedDates.add(day);
-
-                        // Default time for a newly selected date
                         selectedTimes[day] = 'Afternoon';
                       }
+
+                      selectedDay = day;
                     });
                   },
-                  headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: false,
-                  ),
-                  calendarStyle: CalendarStyle(
-                    outsideDaysVisible: true,
-
-                    todayDecoration: BoxDecoration(
-                      color: Colors.transparent,
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-
-                    todayTextStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.normal,
-                    ),
-
-                    selectedDecoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-
-                    selectedTextStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                )
               ),
 
               const SizedBox(height: 16),
