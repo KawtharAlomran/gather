@@ -9,10 +9,15 @@ import '../data/repositories/openstreetmap_repository.dart';
 import '../data/repositories/vote_repository.dart';
 import '../data/repositories/preference_repository.dart';
 import '../data/services/location_service.dart';
+import 'package:gather/models/gathering_model.dart';
 
 
 class PlaceVotingScreen extends StatefulWidget {
-  const PlaceVotingScreen({super.key});
+  final Gathering gathering;
+  const PlaceVotingScreen({
+    super.key,
+    required this.gathering,
+  });
 
   @override
   State<PlaceVotingScreen> createState() =>
@@ -27,10 +32,11 @@ class _PlaceVotingScreenState
   final VoteRepository voteRepository =
       VoteRepository();
 
-  final double userLatitude = 26.2235;
-  final double userLongitude = 50.5876;
+  final PreferenceRepository preferenceRepository =
+      FirebasePreferenceRepository();
 
-  final String gatheringId = 'gathering_1';
+  final LocationService locationService =
+      LocationService();
 
   List<Place> places = [];
   String? votedPlaceId;
@@ -38,15 +44,19 @@ class _PlaceVotingScreenState
   String? get userId =>
       FirebaseAuth.instance.currentUser?.uid;
 
+  String get gatheringId =>
+      widget.gathering.id;
+
+  List<String> get participantIds =>
+      widget.gathering.participantIds;
 
   @override
   void initState() {
     super.initState();
-    //loadPlaces();
+    loadPlaces();
     loadUserVote();
   }
 
-/*
   Future<void> loadPlaces() async {
     try {
       final locations = await preferenceRepository
@@ -113,7 +123,7 @@ class _PlaceVotingScreenState
       debugPrint('Error saving vote: $e');
     }
   }
-*/
+
   Future<void> loadUserVote() async {
     final currentUserId = userId;
 

@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/profile': (context) => const ProfileScreen(),
         //'/invitations': (context) => const InvitationPage(),
-        '/place-voting': (context) => const PlaceVotingScreen(),
+        //'/place-voting': (context) => const PlaceVotingScreen(),
         '/home': (context) => const HomePage(),
         //'/update-preferences': (context) => const TimePreferenceScreen(), // Placeholder for the preferences page
       },
