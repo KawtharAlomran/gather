@@ -5,36 +5,134 @@ class VoteRepository {
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
-  Future<void> addVote(Vote vote) async {
-    await _firestore.collection('votes').doc(vote.id).set({
+  // Saves or replaces the user's vote for one category.
+  //
+  // targetType examples:
+  // "datetime"
+  // "place"
+  Future<void> saveVote({
+    required String gatheringId,
+    required String userId,
+    required String targetId,
+    required String targetType,
+  }) async {
+    final voteId =
+        '${gatheringId}_${userId}_$targetType';
+
+    final vote = Vote(
+      id: voteId,
+      gatheringId: gatheringId,
+      userId: userId,
+      targetId: targetId,
+      targetType: targetType,
+    );
+
+    await _firestore
+        .collection('votes')
+        .doc(voteId)
+        .set({
       'id': vote.id,
       'gatheringId': vote.gatheringId,
       'userId': vote.userId,
       'targetId': vote.targetId,
       'targetType': vote.targetType,
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
-  Future<List<Vote>> getVotes(String gatheringId) async {
-    final snapshot = await _firestore
-        .collection('votes')
-        .where('gatheringId', isEqualTo: gatheringId)
-        .get();
+  // Gets all votes for a gathering.
+  // You can optionally filter by "datetime" or "place".
+  Future<List<Vote>> getVotes(
+    String gatheringId, {
+    String? targetType,
+  }) async {
+    Query<Map<String, dynamic>> query =
+        _firestore
+            .collection('votes')
+            .where(
+              'gatheringId',
+              isEqualTo: gatheringId,
+            );
+
+    if (targetType != null) {
+      query = query.where(
+        'targetType',
+        isEqualTo: targetType,
+      );
+    }
+
+    final snapshot = await query.get();
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
 
       return Vote(
-        id: data['id'] as String,
-        gatheringId: data['gatheringId'] as String,
-        userId: data['userId'] as String,
-        targetId: data['targetId'] as String,
-        targetType: data['targetType'] as String,
+        id: data['id']?.toString() ?? doc.id,
+        gatheringId:
+            data['gatheringId']?.toString() ?? '',
+        userId: data['userId']?.toString() ?? '',
+        targetId: data['targetId']?.toString() ?? '',
+        targetType:
+            data['targetType']?.toString() ?? '',
       );
     }).toList();
   }
 
-  Future<void> deleteVote(String voteId) async {
-    await _firestore.collection('votes').doc(voteId).delete();
+  // Deletes the user's vote for a category.
+  Future<void> deleteVote({
+    required String gatheringId,
+    required String userId,
+    required String targetType,
+  }) async {
+    final voteId =
+        '${gatheringId}_${userId}_$targetType';
+
+    await _firestore
+        .collection('votes')
+        .doc(voteId)
+        .delete();
+  }
+
+  // Counts how many votes each option received.
+  Future<Map<String, int>> countVotes({
+    required String gatheringId,
+    required String targetType,
+  }) async {
+    final votes = await getVotes(
+      gatheringId,
+      targetType: targetType,
+    );
+
+    final counts = <String, int>{};
+
+    for (final vote in votes) {
+      counts[vote.targetId] =
+          (counts[vote.targetId] ?? 0) + 1;
+    }
+
+    return counts;
+  }
+
+  // Returns the option with the highest number of votes.
+  Future<String?> getWinningOption({
+    required String gatheringId,
+    required String targetType,
+  }) async {
+    final counts = await countVotes(
+      gatheringId: gatheringId,
+      targetType: targetType,
+    );
+
+    if (counts.isEmpty) return null;
+
+    String winnerId = counts.keys.first;
+
+    for (final optionId in counts.keys) {
+      if (counts[optionId]! > counts[winnerId]!) {
+        winnerId = optionId;
+      }
+    }
+
+    return winnerId;
   }
 }

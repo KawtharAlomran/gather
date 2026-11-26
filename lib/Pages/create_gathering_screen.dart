@@ -291,18 +291,12 @@ class _CreateGatheringState extends State<CreateGathering> {
 
     if (_selectedInviteMethod == 1) {
       return EmailInviteWidget(
-        availableEmails: _friends
-            .where((friend) => friend.email != null)
-            .map((friend) => friend.email!)
-            .toList(),
         selectedEmails: _selectedEmails,
         onEmailsChanged: (emails) {
           setState(() {
             _selectedEmails = emails;
           });
-        },
-      );
-    }
+        },   );}
 
     return const LinkInviteWidget();
   }

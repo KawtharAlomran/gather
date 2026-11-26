@@ -24,8 +24,13 @@ class FirestoreInvitationRepository implements InvitationRepository {
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth ?? FirebaseAuth.instance;
 
+  // Firestore invitations collection.
   CollectionReference<Map<String, dynamic>> get _invitations =>
       _firestore.collection('invitations');
+
+  // Firestore gatherings collection.
+  CollectionReference<Map<String, dynamic>> get _gatherings =>
+      _firestore.collection('gatherings');
 
   // Get the authenticated user's UID.
   String get _currentUserId {
@@ -48,11 +53,13 @@ class FirestoreInvitationRepository implements InvitationRepository {
         .get();
 
     return snapshot.docs
-        .map((doc) => InvitationModel.fromFirestore(doc))
+        .map(
+          (doc) => InvitationModel.fromFirestore(doc),
+        )
         .toList();
   }
 
-  // Accept an invitation.
+  // Accept an invitation and join its gathering.
   @override
   Future<InvitationModel> acceptInvitation(
     String invitationId,
@@ -63,7 +70,7 @@ class FirestoreInvitationRepository implements InvitationRepository {
     );
   }
 
-  // Decline an invitation.
+  // Decline an invitation without joining the gathering.
   @override
   Future<InvitationModel> declineInvitation(
     String invitationId,
@@ -74,45 +81,102 @@ class FirestoreInvitationRepository implements InvitationRepository {
     );
   }
 
-  // Update an invitation only if it belongs to the current user.
+  // Update an invitation using a Firestore transaction.
   Future<InvitationModel> _updateStatus(
     String invitationId,
     InvitationStatus newStatus,
   ) async {
     final userId = _currentUserId;
-    final documentRef = _invitations.doc(invitationId);
+    final invitationRef = _invitations.doc(invitationId);
 
     return _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(documentRef);
+      // Read the invitation document.
+      final invitationSnapshot =
+          await transaction.get(invitationRef);
 
-      if (!snapshot.exists) {
+      if (!invitationSnapshot.exists) {
         throw StateError('Invitation not found.');
       }
 
-      final invitation = InvitationModel.fromFirestore(snapshot);
+      final invitation =
+          InvitationModel.fromFirestore(invitationSnapshot);
 
-      // Prevent responding to another user's invitation.
+      // Only the invitation recipient can respond.
       if (invitation.inviteeId != userId) {
         throw StateError(
           'You are not authorized to update this invitation.',
         );
       }
 
-      // Prevent responding to an invitation twice.
+      // Only pending invitations can be accepted or declined.
       if (invitation.status != InvitationStatus.pending) {
         throw StateError(
           'Invitation has already been responded to.',
         );
       }
 
-      transaction.update(documentRef, {
+      // Read the gathering before performing any writes.
+      DocumentReference<Map<String, dynamic>>? gatheringRef;
+
+      if (newStatus == InvitationStatus.accepted) {
+        gatheringRef = _gatherings.doc(invitation.gatheringId);
+
+        final gatheringSnapshot =
+            await transaction.get(gatheringRef);
+
+        if (!gatheringSnapshot.exists) {
+          throw StateError('Gathering not found.');
+        }
+      }
+
+      // Update the invitation status.
+      transaction.update(invitationRef, {
         'status': newStatus.name,
       });
 
-      return invitation.copyWith(status: newStatus);
+      // Add the user to the gathering when accepted.
+      if (newStatus == InvitationStatus.accepted) {
+        transaction.update(gatheringRef!, {
+          'participantIds': FieldValue.arrayUnion([userId]),
+        });
+      }
+
+      // Return the updated invitation model.
+      return invitation.copyWith(
+        status: newStatus,
+      );
     });
   }
 }
+
+// --------------------------------------------------
+// Example usage
+// --------------------------------------------------
+
+// final repository = FirestoreInvitationRepository();
+//
+// // Get the current user's invitations.
+// final invitations = await repository.getInvitations();
+//
+// // Accept an invitation and join the gathering.
+// await repository.acceptInvitation('invitation_document_id');
+//
+// // Decline an invitation.
+// await repository.declineInvitation('invitation_document_id');
+//
+// --------------------------------------------------
+// Notes
+// --------------------------------------------------
+
+// - Uses Firebase Authentication to identify the current user.
+// - Retrieves invitations belonging to the authenticated user.
+// - Accept updates the invitation status to "accepted".
+// - Accept adds the user UID to gathering participantIds.
+// - Decline updates the invitation status to "declined" only.
+// - Firestore transactions update related documents atomically.
+// - arrayUnion prevents duplicate participant IDs.
+// - Firestore Security Rules must authorize these operations.
+
 
 // Example usage:
 //
