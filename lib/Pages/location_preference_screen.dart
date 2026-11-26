@@ -11,19 +11,23 @@ import 'package:gather/models/preference_model.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_message.dart';
+import 'package:gather/models/gathering_model.dart';
 
 class LocationPreferenceScreen extends StatefulWidget {
-  final Map<DateTime, String> selectedTimes; // Stores the selected time for each date
-  final List<String> selectedActivities; // Stores the selected activities
-  final List<DateTime> selectedDates; // Stores the selected dates
-  
-  // Constructor for the LocationPreferenceScreen
+  final Gathering gathering; // The gathering for which to set preferences
+
+  final List<DateTime> selectedDates;
+  final Map<DateTime, String> selectedTimes;
+  final List<String> selectedActivities;
+
   const LocationPreferenceScreen({
     super.key,
+    required this.gathering,
     required this.selectedDates,
     required this.selectedTimes,
     required this.selectedActivities,
   });
+
 
   @override
   State<LocationPreferenceScreen> createState() =>
@@ -371,12 +375,7 @@ class _LocationPreferenceScreenState
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const TimePreferenceScreen(),
-              ),
-            );
+            Navigator.pop(context);
           },
         ),
       ),

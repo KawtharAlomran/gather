@@ -3,9 +3,15 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:gather/Pages/location_preference_screen.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import 'package:gather/shared_widgets/app_card.dart';
+import 'package:gather/models/gathering_model.dart';
 
 class TimePreferenceScreen extends StatefulWidget {
-  const TimePreferenceScreen({super.key});
+  final Gathering gathering;
+
+  const TimePreferenceScreen({
+    super.key,
+    required this.gathering,
+  });
 
   @override
   State<TimePreferenceScreen> createState() =>
@@ -21,15 +27,10 @@ class _TimePreferenceScreenState
   // Stores the selected time for each date
   final Map<DateTime, String> selectedTimes = {};
 
-  final Set<String> selectedActivities = {'Dinner'};
+  final Set<String> selectedActivities = {};
 
-  //For now the activities are hardcoded, but in the future, they will be fetched from the created gathering 
-  final List<String> activities = [
-    'Dinner',
-    'Movie night',
-    'Hiking',
-    'Coffee',
-  ];
+  List<String> get activities =>
+      widget.gathering.activities;
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +57,12 @@ class _TimePreferenceScreenState
               AppCard(
                 padding: const EdgeInsets.all(8),
                 child: TableCalendar(
-                  firstDay: DateTime(2026),
-                  lastDay: DateTime(2030),
+                  firstDay: widget.gathering.startDate ??
+                  DateTime.now(),
+                  lastDay: widget.gathering.endDate ??
+                  DateTime.now().add(
+                    const Duration(days: 365),
+                  ),
                   focusedDay: focusedDay,
                   calendarFormat: CalendarFormat.month,
                   availableCalendarFormats: const {
@@ -188,6 +193,7 @@ class _TimePreferenceScreenState
 
               const SizedBox(height: 32),
 
+
               AppButton(
                 text: 'Next',
                 onPressed: selectedDates.isEmpty
@@ -197,6 +203,7 @@ class _TimePreferenceScreenState
                           context,
                           MaterialPageRoute(
                             builder: (_) => LocationPreferenceScreen(
+                              gathering: widget.gathering,
                               selectedDates: selectedDates.toList(),
                               selectedTimes: selectedTimes,
                               selectedActivities:

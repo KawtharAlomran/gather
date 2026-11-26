@@ -176,7 +176,7 @@ class _CreateGatheringState extends State<CreateGathering> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => TimePreferenceScreen(),
+          builder: (_) => TimePreferenceScreen( gathering: gathering),
         ),
       );
     } catch (e) {
