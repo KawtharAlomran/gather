@@ -1,32 +1,97 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+const {onCall, HttpsError} =
+  require("firebase-functions/v2/https");
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+const {initializeApp} = require("firebase-admin/app");
+const {getFirestore, FieldValue} =
+  require("firebase-admin/firestore");
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+initializeApp();
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+const db = getFirestore();
+
+// Accept an invitation and join its gathering.
+exports.acceptInvitation = onCall(
+  {region: "us-central1"},
+  async (request) => {
+    // Verify authentication.
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "You must be logged in."
+      );
+    }
+
+    const userId = request.auth.uid;
+    const invitationId = request.data.invitationId;
+
+    if (typeof invitationId !== "string" ||
+        invitationId.trim().length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "A valid invitation ID is required."
+      );
+    }
+
+    const invitationRef =
+      db.collection("invitations").doc(invitationId);
+
+    await db.runTransaction(async (transaction) => {
+      const invitationDoc =
+        await transaction.get(invitationRef);
+
+      if (!invitationDoc.exists) {
+        throw new HttpsError(
+          "not-found",
+          "Invitation not found."
+        );
+      }
+
+      const invitation = invitationDoc.data();
+
+      // Only the recipient can accept the invitation.
+      if (invitation.inviteeId !== userId) {
+        throw new HttpsError(
+          "permission-denied",
+          "This invitation does not belong to you."
+        );
+      }
+
+      if (invitation.status !== "pending") {
+        throw new HttpsError(
+          "failed-precondition",
+          "Invitation has already been answered."
+        );
+      }
+
+      const gatheringRef =
+        db.collection("gatherings").doc(invitation.gatheringId);
+
+      const gatheringDoc =
+        await transaction.get(gatheringRef);
+
+      if (!gatheringDoc.exists) {
+        throw new HttpsError(
+          "not-found",
+          "Gathering not found."
+        );
+      }
+
+      // Update invitation status.
+      transaction.update(invitationRef, {
+        status: "accepted",
+      });
+
+      // Add the user without duplicating their UID.
+      transaction.update(gatheringRef, {
+        participantIds: FieldValue.arrayUnion(userId),
+      });
+    });
+
+    return {
+      success: true,
+      message: "Invitation accepted successfully.",
+    };
+  }
+);
+
