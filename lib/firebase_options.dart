@@ -46,6 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '303306878474',
     projectId: 'gather-d7940',
     authDomain: 'gather-d7940.firebaseapp.com',
+    databaseURL: 'https://gather-d7940-default-rtdb.firebaseio.com',
     storageBucket: 'gather-d7940.firebasestorage.app',
     measurementId: 'G-NY6NXQNTEJ',
   );
@@ -55,23 +56,24 @@ class DefaultFirebaseOptions {
     appId: '1:303306878474:android:d8403fcfc20c12643b39f3',
     messagingSenderId: '303306878474',
     projectId: 'gather-d7940',
+    databaseURL: 'https://gather-d7940-default-rtdb.firebaseio.com',
     storageBucket: 'gather-d7940.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyB5uHIkKLmVuHORJeAcScs1AjGeDYlAtaI',
     appId: '1:303306878474:ios:d0c777b787d172ca3b39f3',
     messagingSenderId: '303306878474',
     projectId: 'gather-d7940',
+    databaseURL: 'https://gather-d7940-default-rtdb.firebaseio.com',
     storageBucket: 'gather-d7940.firebasestorage.app',
     iosBundleId: 'com.example.gather',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyB5uHIkKLmVuHORJeAcScs1AjGeDYlAtaI',
     appId: '1:303306878474:ios:d0c777b787d172ca3b39f3',
     messagingSenderId: '303306878474',
     projectId: 'gather-d7940',
+    databaseURL: 'https://gather-d7940-default-rtdb.firebaseio.com',
     storageBucket: 'gather-d7940.firebasestorage.app',
     iosBundleId: 'com.example.gather',
   );
@@ -82,6 +84,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '303306878474',
     projectId: 'gather-d7940',
     authDomain: 'gather-d7940.firebaseapp.com',
+    databaseURL: 'https://gather-d7940-default-rtdb.firebaseio.com',
     storageBucket: 'gather-d7940.firebasestorage.app',
     measurementId: 'G-VCCYVM2H1R',
   );
