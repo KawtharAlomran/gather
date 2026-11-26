@@ -75,43 +75,72 @@ class FirestoreInvitationRepository implements InvitationRepository {
   }
 
   // Update an invitation only if it belongs to the current user.
-  Future<InvitationModel> _updateStatus(
-    String invitationId,
-    InvitationStatus newStatus,
-  ) async {
-    final userId = _currentUserId;
-    final documentRef = _invitations.doc(invitationId);
 
-    return _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(documentRef);
+Future<InvitationModel> _updateStatus(
+  String invitationId,
+  InvitationStatus newStatus,
+) async {
+  final userId = _currentUserId;
+  final invitationRef = _invitations.doc(invitationId);
 
-      if (!snapshot.exists) {
-        throw StateError('Invitation not found.');
+  return _firestore.runTransaction((transaction) async {
+    // Read the invitation.
+    final invitationSnapshot =
+        await transaction.get(invitationRef);
+
+    if (!invitationSnapshot.exists) {
+      throw StateError('Invitation not found.');
+    }
+
+    final invitation =
+        InvitationModel.fromFirestore(invitationSnapshot);
+
+    // Only the recipient can respond.
+    if (invitation.inviteeId != userId) {
+      throw StateError(
+        'You are not authorized to update this invitation.',
+      );
+    }
+
+    // Only pending invitations can be updated.
+    if (invitation.status != InvitationStatus.pending) {
+      throw StateError(
+        'Invitation has already been responded to.',
+      );
+    }
+
+    // Read the gathering before performing any writes.
+    DocumentReference<Map<String, dynamic>>? gatheringRef;
+
+    if (newStatus == InvitationStatus.accepted) {
+      gatheringRef = _firestore
+          .collection('gatherings')
+          .doc(invitation.gatheringId);
+
+      final gatheringSnapshot =
+          await transaction.get(gatheringRef);
+
+      if (!gatheringSnapshot.exists) {
+        throw StateError('Gathering not found.');
       }
+    }
 
-      final invitation = InvitationModel.fromFirestore(snapshot);
-
-      // Prevent responding to another user's invitation.
-      if (invitation.inviteeId != userId) {
-        throw StateError(
-          'You are not authorized to update this invitation.',
-        );
-      }
-
-      // Prevent responding to an invitation twice.
-      if (invitation.status != InvitationStatus.pending) {
-        throw StateError(
-          'Invitation has already been responded to.',
-        );
-      }
-
-      transaction.update(documentRef, {
-        'status': newStatus.name,
-      });
-
-      return invitation.copyWith(status: newStatus);
+    // Update invitation status.
+    transaction.update(invitationRef, {
+      'status': newStatus.name,
     });
-  }
+
+    // Add the user to the gathering only when accepted.
+    if (newStatus == InvitationStatus.accepted) {
+      transaction.update(gatheringRef!, {
+        'participantIds': FieldValue.arrayUnion([userId]),
+      });
+    }
+
+    return invitation.copyWith(status: newStatus);
+  });
+}
+
 }
 
 // Example usage:

@@ -1,6 +1,7 @@
 {
   "projects": {
-    "gather": "gather-d7940"
+    "gather": "gather-d7940",
+    "default": "gather-d7940"
   },
   "targets": {},
   "etags": {}
