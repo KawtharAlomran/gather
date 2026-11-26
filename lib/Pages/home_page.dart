@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'NotificationPage.dart';
 import 'create_gathering_screen.dart';
-import 'profile_screen.dart';
-
 import '../data/repositories/gathering_details_repository.dart';
 import '../models/gathering_model.dart';
 import '../Navigation/gathering_navigation.dart';
@@ -114,6 +112,7 @@ IconButton(
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            debugPrint('Failed to load gatherings: ${snapshot.error}');
             return const Center(child: Text('Failed to load gatherings'));
           }
           final all = snapshot.data ?? <GatheringModel>[];
