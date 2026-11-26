@@ -1,14 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
-
-import '../../models/gathering_model.dart';
-import 'dart:convert';
-
-import 'package:flutter/services.dart';
-
-import '../../models/gathering_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
+
+import '../../models/gathering_model.dart';
 
 // Defines the operations for managing gatherings.
 abstract class GatheringRepository {
@@ -121,9 +117,16 @@ final Set<String> _leftGatheringIds = <String>{};
 Future<void> leaveGathering(String gatheringId) async {
   _leftGatheringIds.add(gatheringId);
 }
+
 Future<List<GatheringModel>> loadGatherings() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    throw StateError('Sign in to Gather to see your gatherings.');
+  }
+
   final snapshot = await FirebaseFirestore.instance
       .collection('gatherings')
+      .where('participantIds', arrayContains: user.uid)
       .get();
 
   return snapshot.docs.map((doc) {
