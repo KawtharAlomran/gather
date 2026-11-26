@@ -4,6 +4,8 @@ class PreferenceModel {
   final List<String> activities;
   final String location;
   final List<String> suggestedLocations;
+  final double? latitude;
+  final double? longitude;
 
   const PreferenceModel({
     required this.dates,
@@ -11,36 +13,56 @@ class PreferenceModel {
     required this.activities,
     required this.location,
     required this.suggestedLocations,
+    this.latitude,
+    this.longitude,
   });
 
-  // Convert the model into fields that Firestore can save.
   Map<String, dynamic> toJson() {
     return {
-      'dates': dates.map((date) => date.toIso8601String()).toList(),
+      'dates': dates
+          .map((date) => date.toIso8601String())
+          .toList(),
       'times': times.map(
-        (date, time) => MapEntry(date.toIso8601String(), time),
+        (date, time) => MapEntry(
+          date.toIso8601String(),
+          time,
+        ),
       ),
       'activities': activities,
       'location': location,
       'suggestedLocations': suggestedLocations,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
-  // Build the model from fields read from Firestore.
-  factory PreferenceModel.fromJson(Map<String, dynamic> json) {
-    final dateStrings = List<String>.from(json['dates'] as List);
-    final savedTimes = Map<String, String>.from(json['times'] as Map);
+  factory PreferenceModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final dateStrings =
+        List<String>.from(json['dates'] ?? []);
+
+    final savedTimes = Map<String, dynamic>.from(
+      json['times'] ?? {},
+    );
 
     return PreferenceModel(
       dates: dateStrings.map(DateTime.parse).toList(),
       times: savedTimes.map(
-        (date, time) => MapEntry(DateTime.parse(date), time),
+        (date, time) => MapEntry(
+          DateTime.parse(date),
+          time.toString(),
+        ),
       ),
-      activities: List<String>.from(json['activities'] as List),
-      location: json['location'] as String,
+      activities: List<String>.from(
+        json['activities'] ?? [],
+      ),
+      location: json['location'] ?? '',
       suggestedLocations: List<String>.from(
-        json['suggestedLocations'] as List,
+        json['suggestedLocations'] ?? [],
       ),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 }

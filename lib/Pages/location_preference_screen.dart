@@ -36,7 +36,7 @@ class LocationPreferenceScreen extends StatefulWidget {
 
 class _LocationPreferenceScreenState
     extends State<LocationPreferenceScreen> {
-  final PreferenceRepository repository = MockPreferenceRepository(); 
+  final PreferenceRepository repository = FirebasePreferenceRepository(); 
   final MapController mapController = MapController();
   final TextEditingController suggestedLocationController =
       TextEditingController(); // Controller for the suggested location input field
