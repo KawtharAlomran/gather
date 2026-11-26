@@ -1,0 +1,460 @@
+
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
+
+import '../../models/gathering_model.dart';
+
+// Defines the operations for managing gatherings.
+abstract class GatheringRepository {
+  Future<List<Gathering>> getGatherings();
+
+  Future<Gathering?> getGatheringById(String gatheringId);
+
+  Future<Gathering> createGathering(Gathering gathering);
+
+  Future<Gathering> updateGathering(Gathering gathering);
+
+  Future<void> deleteGathering(String gatheringId);
+
+  Future<Gathering> createGatheringWithInvitations({
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+    required double minBudget,
+    required double maxBudget,
+    required List<String> activities,
+    required List<String> inviteeIds,
+  });
+}
+
+// --------------------------------------------------
+// Mock Gathering Repository
+// Temporary implementation for older screens.
+// --------------------------------------------------
+
+class MockGatheringRepository implements GatheringRepository {
+  List<Gathering>? _gatherings;
+
+  // Load gatherings from JSON once per repository instance.
+  Future<void> _loadGatherings() async {
+    if (_gatherings != null) return;
+
+    final jsonString = await rootBundle.loadString(
+      'lib/data/gatherings.json',
+    );
+
+    final List<dynamic> jsonData = jsonDecode(jsonString);
+
+    _gatherings = jsonData
+        .map(
+          (item) => Gathering.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<List<Gathering>> getGatherings() async {
+    await _loadGatherings();
+    return List.unmodifiable(_gatherings!);
+  }
+
+  @override
+  Future<Gathering?> getGatheringById(
+    String gatheringId,
+  ) async {
+    await _loadGatherings();
+
+    for (final gathering in _gatherings!) {
+      if (gathering.id == gatheringId) {
+        return gathering;
+      }
+    }
+
+    return null;
+  }
+
+  @override
+  Future<Gathering> createGathering(
+    Gathering gathering,
+  ) async {
+    await _loadGatherings();
+
+    final exists = _gatherings!.any(
+      (item) => item.id == gathering.id,
+    );
+
+    if (exists) {
+      throw StateError(
+        'Gathering already exists: ${gathering.id}',
+      );
+    }
+
+    _gatherings!.add(gathering);
+
+    return gathering;
+  }
+
+  @override
+  Future<Gathering> updateGathering(
+    Gathering gathering,
+  ) async {
+    await _loadGatherings();
+
+    final index = _gatherings!.indexWhere(
+      (item) => item.id == gathering.id,
+    );
+
+    if (index == -1) {
+      throw StateError(
+        'Gathering not found: ${gathering.id}',
+      );
+    }
+
+    _gatherings![index] = gathering;
+
+    return gathering;
+  }
+
+  @override
+  Future<void> deleteGathering(
+    String gatheringId,
+  ) async {
+    await _loadGatherings();
+
+    final index = _gatherings!.indexWhere(
+      (item) => item.id == gatheringId,
+    );
+
+    if (index == -1) {
+      throw StateError(
+        'Gathering not found: $gatheringId',
+      );
+    }
+
+    _gatherings!.removeAt(index);
+  }
+
+  @override
+  Future<Gathering> createGatheringWithInvitations({
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+    required double minBudget,
+    required double maxBudget,
+    required List<String> activities,
+    required List<String> inviteeIds,
+  }) {
+    throw UnsupportedError(
+      'Mock repository does not support sending invitations.',
+    );
+  }
+}
+
+// --------------------------------------------------
+// Firestore Gathering Repository
+// Main implementation using Firebase.
+// --------------------------------------------------
+
+class FirestoreGatheringRepository implements GatheringRepository {
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  FirestoreGatheringRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance;
+
+  CollectionReference<Map<String, dynamic>> get _gatherings =>
+      _firestore.collection('gatherings');
+
+  CollectionReference<Map<String, dynamic>> get _invitations =>
+      _firestore.collection('invitations');
+
+  // Get the currently authenticated user's UID.
+  String get _currentUserId {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw StateError('User is not authenticated.');
+    }
+
+    return user.uid;
+  }
+
+  // Get gatherings where the current user is a participant.
+  @override
+  Future<List<Gathering>> getGatherings() async {
+    final snapshot = await _gatherings
+        .where(
+          'participantIds',
+          arrayContains: _currentUserId,
+        )
+        .get();
+
+    return snapshot.docs.map((document) {
+      return Gathering.fromJson({
+        ...document.data(),
+        'id': document.id,
+      });
+    }).toList();
+  }
+
+  // Get a gathering by its Firestore document ID.
+  @override
+  Future<Gathering?> getGatheringById(
+    String gatheringId,
+  ) async {
+    final document = await _gatherings
+        .doc(gatheringId)
+        .get();
+
+    if (!document.exists || document.data() == null) {
+      return null;
+    }
+
+    return Gathering.fromJson({
+      ...document.data()!,
+      'id': document.id,
+    });
+  }
+
+  // Create a gathering using an existing ID.
+  @override
+  Future<Gathering> createGathering(
+    Gathering gathering,
+  ) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw StateError('User is not authenticated.');
+    }
+
+    final documentRef = _gatherings.doc(gathering.id);
+
+    // Prevent accidentally overwriting an existing gathering.
+    await _firestore.runTransaction((transaction) async {
+      final existing = await transaction.get(documentRef);
+
+      if (existing.exists) {
+        throw StateError('Gathering already exists.');
+      }
+
+      transaction.set(documentRef, {
+        ...gathering.toJson(),
+        'creatorId': user.uid,
+        'participantIds': [user.uid],
+        'status': 'planning',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+
+    return gathering.copyWith(
+      participantIds: [user.uid],
+    );
+  }
+
+  // Update gathering details.
+  @override
+  Future<Gathering> updateGathering(
+    Gathering gathering,
+  ) async {
+    final userId = _currentUserId;
+    final documentRef = _gatherings.doc(gathering.id);
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(documentRef);
+
+      if (!snapshot.exists) {
+        throw StateError('Gathering not found.');
+      }
+
+      if (snapshot.data()?['creatorId'] != userId) {
+        throw StateError(
+          'Only the organizer can update this gathering.',
+        );
+      }
+
+      transaction.update(documentRef, {
+        'title': gathering.title,
+        'startDate': gathering.startDate?.toIso8601String(),
+        'endDate': gathering.endDate?.toIso8601String(),
+        'minBudget': gathering.minBudget,
+        'maxBudget': gathering.maxBudget,
+        'activities': gathering.activities,
+      });
+    });
+
+    return gathering;
+  }
+
+  // Deletion needs coordinated cleanup of related invitations.
+  @override
+  Future<void> deleteGathering(
+    String gatheringId,
+  ) async {
+    throw UnsupportedError(
+      'Gathering deletion is not implemented yet.',
+    );
+  }
+
+  // Create a gathering and send invitations in one batch.
+  @override
+  Future<Gathering> createGatheringWithInvitations({
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+    required double minBudget,
+    required double maxBudget,
+    required List<String> activities,
+    required List<String> inviteeIds,
+  }) async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw StateError('Please sign in first.');
+    }
+
+    final organizerId = currentUser.uid;
+    final gatheringTitle = title.trim();
+
+    // Validate gathering details.
+    if (gatheringTitle.isEmpty) {
+      throw ArgumentError('Gathering title cannot be empty.');
+    }
+
+    if (endDate.isBefore(startDate)) {
+      throw ArgumentError(
+        'End date cannot be before start date.',
+      );
+    }
+
+    if (minBudget < 0 || maxBudget < minBudget) {
+      throw ArgumentError('Invalid budget range.');
+    }
+
+    // Remove duplicate invitees and the organizer.
+    final recipients = inviteeIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty && id != organizerId)
+        .toSet();
+
+    // Keep batch size manageable.
+    if (recipients.length > 100) {
+      throw ArgumentError(
+        'Maximum 100 invitees per gathering.',
+      );
+    }
+
+    // Generate a unique gathering document ID.
+    final gatheringRef = _gatherings.doc();
+
+    final batch = _firestore.batch();
+
+    // Save gathering details.
+    batch.set(gatheringRef, {
+      'title': gatheringTitle,
+      'creatorId': organizerId,
+      'creatorEmail': currentUser.email ?? '',
+      'createdBy': currentUser.displayName ?? '',
+      'participantIds': [organizerId],
+      'attendingCount': 1,
+      'status': 'planning',
+      'planningProgress': 0,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'minBudget': minBudget,
+      'maxBudget': maxBudget,
+      'activities': List<String>.from(activities),
+      'dateTime': null,
+      'dateOptions': [],
+      'votingEnded': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // Create a pending invitation for each recipient.
+    for (final recipientId in recipients) {
+      final invitationId =
+          '${gatheringRef.id}_$recipientId';
+
+      final invitationRef = _invitations.doc(
+        invitationId,
+      );
+
+      batch.set(invitationRef, {
+        'gatheringId': gatheringRef.id,
+        'inviterId': organizerId,
+        'inviteeId': recipientId,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Save the gathering and invitations atomically.
+    await batch.commit();
+
+    return Gathering(
+      id: gatheringRef.id,
+      title: gatheringTitle,
+      creatorEmail: currentUser.email ?? '',
+      participantIds: [organizerId],
+      startDate: startDate,
+      endDate: endDate,
+      minBudget: minBudget,
+      maxBudget: maxBudget,
+      activities: List<String>.from(activities),
+    );
+  }
+}
+
+// --------------------------------------------------
+// Existing Home Page functions
+// --------------------------------------------------
+
+
+// Existing function used by Home Page.
+Future<void> leaveGathering(String gatheringId) async {
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null) {
+    throw StateError('User is not authenticated.');
+  }
+
+  await FirebaseFirestore.instance
+      .collection('gatherings')
+      .doc(gatheringId)
+      .update({
+        'participantIds': FieldValue.arrayRemove([user.uid]),
+      });
+}
+
+// Load gatherings belonging to the current Firebase user.
+Future<List<GatheringModel>> loadGatherings() async {
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null) {
+    throw StateError(
+      'Sign in to Gather to see your gatherings.',
+    );
+  }
+
+  final snapshot = await FirebaseFirestore.instance
+      .collection('gatherings')
+      .where(
+        'participantIds',
+        arrayContains: user.uid,
+      )
+      .get();
+
+  return snapshot.docs.map((document) {
+    return GatheringModel.fromJson({
+      ...document.data(),
+      'id': document.id,
+    });
+  }).toList();
+}

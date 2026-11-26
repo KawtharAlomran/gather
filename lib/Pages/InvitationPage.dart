@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/invitation_model.dart';
 import '../models/user_model.dart';
@@ -24,7 +25,7 @@ class InvitationPage extends StatefulWidget {
     UserRepository? userRepository,
   }) : invitationRepository =
            invitationRepository ?? FirestoreInvitationRepository(),
-       userRepository = userRepository ?? MockUserRepository();
+       userRepository = userRepository ?? FirebaseUserRepository();
 
   @override
   State<InvitationPage> createState() => _InvitationPageState();
@@ -38,11 +39,7 @@ class _InvitationPageState extends State<InvitationPage> {
   String? _error;
   String? _processingId;
 
-  // TODO: Replace with Firestore GatheringRepository.
-  final Map<String, String> _gatheringTitles = {
-    'gather_1': 'Cozy Soup Sunday',
-    'gather_2': 'Nature Photography Hike',
-  };
+  Map<String, String> _gatheringTitles = {};
 
   @override
   void initState() {
@@ -63,15 +60,42 @@ class _InvitationPageState extends State<InvitationPage> {
       final invitations =
           await widget.invitationRepository.getInvitations();
 
-      final users = await widget.userRepository.getUsers();
+      // Invitation access is separate from access to profile/gathering data.
+      // Read optional display details individually, without failing the list.
+      final userIds = invitations.map((i) => i.inviterId).toSet();
+      final gatheringIds = invitations.map((i) => i.gatheringId).toSet();
+      final users = <String, User>{};
+      final titles = <String, String>{};
+
+      await Future.wait([
+        for (final id in userIds)
+          () async {
+            try {
+              final user = await widget.userRepository.getUserById(id);
+              if (user != null) users[id] = user;
+            } catch (e) {
+              debugPrint('Cannot load inviter $id: $e');
+            }
+          }(),
+        for (final id in gatheringIds)
+          () async {
+            try {
+              final doc = await FirebaseFirestore.instance
+                  .collection('gatherings').doc(id).get();
+              final title = doc.data()?['title'];
+              if (title is String && title.isNotEmpty) titles[id] = title;
+            } catch (e) {
+              debugPrint('Cannot load gathering $id: $e');
+            }
+          }(),
+      ]);
 
       if (!mounted) return;
 
       setState(() {
         _invitations = invitations;
-        _usersById = {
-          for (final user in users) user.id: user,
-        };
+        _usersById = users;
+        _gatheringTitles = titles;
         _isLoading = false;
       });
     } catch (e) {
@@ -177,7 +201,7 @@ class _InvitationPageState extends State<InvitationPage> {
   Widget _buildInvitationCard(InvitationModel invitation) {
     final inviter = _usersById[invitation.inviterId];
 
-    final inviterName = inviter?.fullName ?? 'Unknown User';
+    final inviterName = inviter?.fullName ?? 'Gather! member';
 
     final gatheringTitle =
         _gatheringTitles[invitation.gatheringId] ??

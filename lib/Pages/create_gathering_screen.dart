@@ -2,14 +2,13 @@
 import 'package:flutter/material.dart';
 
 import '../data/repositories/user_repository.dart';
+import '../data/repositories/gather_repository.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_message.dart';
 import '../theme/app_theme.dart';
 
 import 'time_preference_screen.dart';
 
-// Update these imports if your teammate uses different paths.
-import '../shared_widgets/friends_invite_widget.dart';
 import '../shared_widgets/email_invite_widget.dart';
 import '../shared_widgets/link_invite_widget.dart';
 
@@ -17,15 +16,21 @@ class CreateGathering extends StatefulWidget {
   const CreateGathering({super.key});
 
   @override
-  State<CreateGathering> createState() => _CreateGatheringState();
+  State<CreateGathering> createState() =>
+      _CreateGatheringState();
 }
 
 class _CreateGatheringState extends State<CreateGathering> {
   final _formKey = GlobalKey<FormState>();
+
   final _nameController = TextEditingController();
   final _activityController = TextEditingController();
 
-  final UserRepository _userRepository = MockUserRepository();
+  final UserRepository _userRepository =
+      FirebaseUserRepository();
+
+  final GatheringRepository _gatheringRepository =
+      FirestoreGatheringRepository();
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -34,20 +39,10 @@ class _CreateGatheringState extends State<CreateGathering> {
 
   final List<String> _activities = [];
   List<String> _selectedEmails = [];
-  Set<String> _selectedFriendIds = {};
 
-  List<Invitee> _friends = [];
+  int _selectedInviteMethod = 1;
 
-  bool _isLoadingFriends = true;
-  String? _friendsError;
-
-  int _selectedInviteMethod = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFriends();
-  }
+  bool _isCreating = false;
 
   @override
   void dispose() {
@@ -56,37 +51,7 @@ class _CreateGatheringState extends State<CreateGathering> {
     super.dispose();
   }
 
-  // Load users for the invitation selection.
-  Future<void> _loadFriends() async {
-    try {
-      final users = await _userRepository.getUsers();
-
-      if (!mounted) return;
-
-      setState(() {
-        // TODO: Filter the current user's actual friends.
-        _friends = users.map((user) {
-          return Invitee(
-            id: user.id,
-            name: user.fullName,
-            email: user.email,
-          );
-        }).toList();
-
-        _isLoadingFriends = false;
-        _friendsError = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoadingFriends = false;
-        _friendsError = 'Unable to load friends.';
-      });
-    }
-  }
-
-  // Select a date range.
+  // Select gathering dates.
   Future<void> _selectDates() async {
     final today = DateUtils.dateOnly(DateTime.now());
 
@@ -94,12 +59,13 @@ class _CreateGatheringState extends State<CreateGathering> {
       context: context,
       firstDate: today,
       lastDate: today.add(const Duration(days: 365)),
-      initialDateRange: _startDate != null && _endDate != null
-          ? DateTimeRange(
-              start: _startDate!,
-              end: _endDate!,
-            )
-          : null,
+      initialDateRange:
+          _startDate != null && _endDate != null
+              ? DateTimeRange(
+                  start: _startDate!,
+                  end: _endDate!,
+                )
+              : null,
     );
 
     if (range == null || !mounted) return;
@@ -117,7 +83,8 @@ class _CreateGatheringState extends State<CreateGathering> {
     if (activity.isEmpty) return;
 
     final exists = _activities.any(
-      (item) => item.toLowerCase() == activity.toLowerCase(),
+      (item) =>
+          item.toLowerCase() == activity.toLowerCase(),
     );
 
     if (exists) {
@@ -143,8 +110,10 @@ class _CreateGatheringState extends State<CreateGathering> {
     });
   }
 
-  // Validate the form and continue without saving yet.
-  void _continue() {
+  // Validate, create gathering and send invitations.
+  Future<void> _continue() async {
+    if (_isCreating) return;
+
     if (!_formKey.currentState!.validate()) return;
 
     if (_startDate == null || _endDate == null) {
@@ -156,13 +125,78 @@ class _CreateGatheringState extends State<CreateGathering> {
       return;
     }
 
+    setState(() {
+      _isCreating = true;
+    });
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TimePreferenceScreen(),
-      ),
-    );
+    try {
+      final inviteeIds = <String>{};
+
+      // Find registered users by their email addresses.
+      for (final email in _selectedEmails) {
+        final user =
+            await _userRepository.findUserByEmail(email);
+
+        if (user == null) {
+          throw StateError(
+            'Registered user not found: $email',
+          );
+        }
+
+        inviteeIds.add(user.id);
+      }
+
+      // Save gathering and invitations atomically.
+      final gathering =
+          await _gatheringRepository
+              .createGatheringWithInvitations(
+        title: _nameController.text.trim(),
+        startDate: _startDate!,
+        endDate: _endDate!,
+        minBudget: _budgetRange.start,
+        maxBudget: _budgetRange.end,
+        activities: List<String>.from(_activities),
+        inviteeIds: inviteeIds.toList(),
+      );
+
+      if (!mounted) return;
+
+      AppMessage.show(
+        context,
+        message:
+            'Gathering created and invitations sent successfully!',
+        type: MessageType.success,
+      );
+
+      debugPrint(
+        'Created gathering ID: ${gathering.id}',
+      );
+
+      // Continue to the next planning screen.
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TimePreferenceScreen(),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Create gathering error: $e');
+
+      if (!mounted) return;
+
+      AppMessage.show(
+        context,
+        message:
+            'Unable to create gathering. Please try again.',
+        type: MessageType.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreating = false;
+        });
+      }
+    }
   }
 
   String _formatDate(DateTime? date) {
@@ -173,10 +207,15 @@ class _CreateGatheringState extends State<CreateGathering> {
 
   // Shared soft input decoration.
   InputDecoration _inputDecoration(String hint) {
+    final theme = Theme.of(context);
+
     return InputDecoration(
       hintText: hint,
+      hintStyle: theme.textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
       filled: true,
-      fillColor: Theme.of(context).colorScheme.surface,
+      fillColor: theme.colorScheme.surface,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 14,
@@ -188,31 +227,35 @@ class _CreateGatheringState extends State<CreateGathering> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Theme.of(context).colorScheme.primary,
+          color: theme.colorScheme.primary,
           width: 1,
         ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Theme.of(context).colorScheme.error,
+          color: theme.colorScheme.error,
         ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Theme.of(context).colorScheme.error,
+          color: theme.colorScheme.error,
           width: 1,
         ),
       ),
     );
   }
 
-  // Build the full-width invitation tabs.
+  // Full-width invitation method tabs.
   Widget _buildInviteTabs() {
     final theme = Theme.of(context);
 
-    const labels = ['Friends List', 'Email', 'Link'];
+    const labels = [
+      'Friends List',
+      'Email',
+      'Link',
+    ];
 
     return Container(
       width: double.infinity,
@@ -223,7 +266,9 @@ class _CreateGatheringState extends State<CreateGathering> {
       ),
       child: Row(
         children: [
-          for (int index = 0; index < labels.length; index++)
+          for (int index = 0;
+              index < labels.length;
+              index++)
             Expanded(
               child: InkWell(
                 onTap: () {
@@ -233,25 +278,30 @@ class _CreateGatheringState extends State<CreateGathering> {
                 },
                 borderRadius: BorderRadius.circular(11),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration:
+                      const Duration(milliseconds: 200),
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(
                     vertical: 12,
                     horizontal: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _selectedInviteMethod == index
-                        ? theme.colorScheme.surface
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(11),
+                    color:
+                        _selectedInviteMethod == index
+                            ? theme.colorScheme.surface
+                            : Colors.transparent,
+                    borderRadius:
+                        BorderRadius.circular(11),
                   ),
                   child: Text(
                     labels[index],
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: _selectedInviteMethod == index
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(
+                      fontWeight:
+                          _selectedInviteMethod == index
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -262,29 +312,19 @@ class _CreateGatheringState extends State<CreateGathering> {
     );
   }
 
-  // Build the selected invitation method.
+  // Display the selected invitation method.
   Widget _buildInviteContent() {
     if (_selectedInviteMethod == 0) {
-      if (_isLoadingFriends) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      }
-
-      if (_friendsError != null) {
-        return Text(_friendsError!);
-      }
-
-      return SizedBox(
-        height: 300,
-        child: FriendsInviteWidget(
-          friends: _friends,
-          selectedFriendIds: _selectedFriendIds,
-          onSelectionChanged: (ids) {
-            setState(() {
-              _selectedFriendIds = ids;
-            });
-          },
+      // Friends integration will be added later.
+      return Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: 24,
+        ),
+        child: Center(
+          child: Text(
+            'Friends list will be available soon.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ),
       );
     }
@@ -296,15 +336,17 @@ class _CreateGatheringState extends State<CreateGathering> {
           setState(() {
             _selectedEmails = emails;
           });
-        },   );}
+        },
+      );
+    }
 
     return const LinkInviteWidget();
   }
 
-  // Show the number of selected invitees.
+  // Display selected invitee count.
   Widget _buildSelectedInvitees() {
-    final count =
-        _selectedFriendIds.length + _selectedEmails.length;
+    final count = _selectedEmails.length;
+    final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -312,7 +354,7 @@ class _CreateGatheringState extends State<CreateGathering> {
         vertical: 12,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -320,7 +362,7 @@ class _CreateGatheringState extends State<CreateGathering> {
           Expanded(
             child: Text(
               'View selected invitees',
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: theme.textTheme.bodyMedium,
             ),
           ),
           Container(
@@ -329,17 +371,14 @@ class _CreateGatheringState extends State<CreateGathering> {
               vertical: 6,
             ),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: theme.colorScheme.primary,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '$count selected',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+              ),
             ),
           ),
         ],
@@ -387,7 +426,8 @@ class _CreateGatheringState extends State<CreateGathering> {
                   'Enter gathering name',
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null ||
+                      value.trim().isEmpty) {
                     return 'Please enter a gathering name.';
                   }
                   return null;
@@ -396,7 +436,7 @@ class _CreateGatheringState extends State<CreateGathering> {
 
               const SizedBox(height: 20),
 
-              // Date range
+              // Date range labels
               Row(
                 children: [
                   Expanded(
@@ -435,9 +475,10 @@ class _CreateGatheringState extends State<CreateGathering> {
 
               const SizedBox(height: 20),
 
-              // Budget
+              // Budget range
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'BUDGET RANGE',
@@ -446,7 +487,8 @@ class _CreateGatheringState extends State<CreateGathering> {
                   Text(
                     '${_budgetRange.start.round()} - '
                     '${_budgetRange.end.round()} SAR',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
@@ -485,7 +527,8 @@ class _CreateGatheringState extends State<CreateGathering> {
                       decoration: _inputDecoration(
                         'Add an activity',
                       ),
-                      onSubmitted: (_) => _addActivity(),
+                      onSubmitted: (_) =>
+                          _addActivity(),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -505,18 +548,22 @@ class _CreateGatheringState extends State<CreateGathering> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _activities.map((activity) {
+                children:
+                    _activities.map((activity) {
                   return InputChip(
                     label: Text(activity),
-                    onDeleted: () => _removeActivity(activity),
+                    onDeleted: () =>
+                        _removeActivity(activity),
                     deleteIcon: const Icon(
                       Icons.close,
                       size: 18,
                     ),
-                    backgroundColor: theme.colorScheme.surface,
+                    backgroundColor:
+                        theme.colorScheme.surface,
                     side: BorderSide.none,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius:
+                          BorderRadius.circular(12),
                     ),
                   );
                 }).toList(),
@@ -546,7 +593,9 @@ class _CreateGatheringState extends State<CreateGathering> {
 
               AppButton(
                 text: 'Create',
-                onPressed: _continue,
+                isLoading: _isCreating,
+                onPressed:
+                    _isCreating ? null : _continue,
               ),
 
               const SizedBox(height: 24),
@@ -557,7 +606,7 @@ class _CreateGatheringState extends State<CreateGathering> {
     );
   }
 
-  // Build a soft date selection field.
+  // Soft date selection field.
   Widget _dateField(String label) {
     final theme = Theme.of(context);
 
