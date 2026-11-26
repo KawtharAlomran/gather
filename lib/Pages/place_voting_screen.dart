@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:gather/models/place_model.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_button.dart';
+
 import '../data/repositories/openstreetmap_repository.dart';
+import '../data/repositories/vote_repository.dart';
+import '../data/repositories/preference_repository.dart';
+import '../data/services/location_service.dart';
+
 
 class PlaceVotingScreen extends StatefulWidget {
   const PlaceVotingScreen({super.key});
@@ -17,41 +24,115 @@ class _PlaceVotingScreenState
   final OpenStreetMapRepository placeRepository =
       OpenStreetMapRepository();
 
+  final VoteRepository voteRepository =
+      VoteRepository();
+
   final double userLatitude = 26.2235;
   final double userLongitude = 50.5876;
+
+  final String gatheringId = 'gathering_1';
 
   List<Place> places = [];
   String? votedPlaceId;
 
+  String? get userId =>
+      FirebaseAuth.instance.currentUser?.uid;
+
+
   @override
   void initState() {
     super.initState();
-    loadPlaces();
+    //loadPlaces();
+    loadUserVote();
   }
 
+/*
   Future<void> loadPlaces() async {
     try {
+      final locations = await preferenceRepository
+          .getParticipantLocations(participantIds);
+
+      if (locations.isEmpty) {
+        debugPrint(
+          'No participant preferences completed yet.',
+        );
+        return;
+      }
+
+      final center =
+          locationService.calculateGroupCenter(locations);
+
       final loadedPlaces =
           await placeRepository.searchNearbyPlaces(
-        latitude: userLatitude,
-        longitude: userLongitude,
+        latitude: center['latitude']!,
+        longitude: center['longitude']!,
       );
 
       if (!mounted) return;
 
       setState(() {
-        places = loadedPlaces;
+        places = loadedPlaces.take(3).toList();
       });
     } catch (e) {
       debugPrint('Error loading places: $e');
     }
   }
 
-  void vote(String placeId) {
+  Future<void> vote(String placeId) async {
+    final currentUserId = userId;
+
+    if (currentUserId == null) {
+      debugPrint('User is not logged in');
+      return;
+    }
+
+    final isRemovingVote =
+        votedPlaceId == placeId;
+
     setState(() {
       votedPlaceId =
-          votedPlaceId == placeId ? null : placeId;
+          isRemovingVote ? null : placeId;
     });
+
+    try {
+      if (isRemovingVote) {
+        await voteRepository.deleteVote(
+          gatheringId: gatheringId,
+          userId: currentUserId,
+          targetType: 'place',
+        );
+      } else {
+        await voteRepository.saveVote(
+          gatheringId: gatheringId,
+          userId: currentUserId,
+          targetId: placeId,
+          targetType: 'place',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving vote: $e');
+    }
+  }
+*/
+  Future<void> loadUserVote() async {
+    final currentUserId = userId;
+
+    if (currentUserId == null) return;
+
+    final votes = await voteRepository.getVotes(
+      gatheringId,
+      targetType: 'place',
+    );
+
+    final userVote = votes.where(
+      (vote) => vote.userId == currentUserId,
+    );
+
+    if (userVote.isNotEmpty && mounted) {
+      setState(() {
+        votedPlaceId = userVote.first.targetId;
+      });
+    }
   }
 
   @override
@@ -186,7 +267,7 @@ class _PlaceVotingScreenState
               backgroundColor: isVoted
                   ? colors.primary
                   : colors.secondary,
-              onPressed: () => vote(place.placeId),
+              onPressed: () => () //vote(place.placeId),
             ),
           ),
         ],
