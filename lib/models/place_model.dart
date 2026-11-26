@@ -1,5 +1,5 @@
 class Place{
-  final String googlePlaceId;
+  final String placeId;
   final String name;
   final String category;
   final double rating;
@@ -9,7 +9,7 @@ class Place{
   final String? googleMapsUrl;
 
   const Place({
-    required this.googlePlaceId,
+    required this.placeId,
     required this.name,
     required this.category,
     required this.rating,
@@ -21,7 +21,7 @@ class Place{
 
   factory Place.fromJson(Map<String, dynamic> json) {
     return Place(
-      googlePlaceId: json['googlePlaceId'] as String,
+      placeId: json['placeId'] as String,
       name: json['name'] as String,
       category: json['category'] as String,
       rating: (json['rating'] as num).toDouble(),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:gather/data/repositories/place_repository.dart';
 import 'package:gather/models/place_model.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_button.dart';
+import '../data/repositories/openstreetmap_repository.dart';
+
 
 class PlaceVotingScreen extends StatefulWidget {
   const PlaceVotingScreen({super.key});
@@ -12,7 +13,12 @@ class PlaceVotingScreen extends StatefulWidget {
 }
 
 class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
-  final PlaceRepository placeRepository = FirebasePlaceRepository(); // Use the mock repository for testing
+
+  // Create an instance of the OpenStreetMapRepository to fetch places
+  final OpenStreetMapRepository placeRepository = OpenStreetMapRepository();
+
+  final double userLatitude = 26.2235;
+  final double userLongitude = 50.5876;
 
   List<Place> places = []; // List to hold the loaded places
   String? votedPlaceId; // Store the ID of the place the user has voted for
@@ -40,7 +46,11 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
   // Load the places from the repository
   Future<void> loadPlaces() async {
     try {
-      final loadedPlaces = await placeRepository.getPlaces();
+      final loadedPlaces =
+        await placeRepository.searchNearbyPlaces(
+          latitude: userLatitude,
+          longitude: userLongitude,
+        );
 
       if (!mounted) return;
 
@@ -107,7 +117,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
 
   // Build the UI for a single place card
   Widget buildPlaceCard(Place place) {
-    final bool isVoted = votedPlaceId == place.googlePlaceId;
+    final bool isVoted = votedPlaceId == place.placeId;
     final colors = Theme.of(context).colorScheme;
     final imagePath = place.image;
 
@@ -176,7 +186,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                     backgroundColor:
                         // Change the button color based on whether the user has voted for this place
                         isVoted ? colors.primary : colors.secondary, 
-                    onPressed: () => vote(place.googlePlaceId),
+                    onPressed: () => vote(place.placeId),
                   ),
                 ),
               ],
