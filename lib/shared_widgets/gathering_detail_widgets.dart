@@ -2,6 +2,7 @@
 // Ensures consistent design and reduces duplicated code
 // for the header, attendance display, and confirmation dialog.
 
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'app_card.dart';
 import 'app_dialog.dart';
@@ -117,24 +118,70 @@ class GatheringAttendancePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Attending')),
-    body: FutureBuilder<List<AttendeeModel>>(
-      future: loadAttendees(gatheringId),
-      builder: (context, snapshot) {
-        final names = snapshot.hasData && snapshot.data!.isNotEmpty
-            ? snapshot.data!.map((a) => a.name).toList()
-            : fallbackNames;
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (names.isEmpty) return const Center(child: Text('No attendee names available.'));
-        return ListView.builder(
-          itemCount: names.length,
-          itemBuilder: (context, index) => ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-            title: Text(names[index]),
+    body: gatheringId.isEmpty
+        ? _attendanceList(fallbackNames)
+        : _LiveAttendees(
+            key: ValueKey(gatheringId),
+            gatheringId: gatheringId,
+            fallbackNames: fallbackNames,
           ),
-        );
-      },
+  );
+}
+
+class _LiveAttendees extends StatefulWidget {
+  final String gatheringId;
+  final List<String> fallbackNames;
+
+  const _LiveAttendees({
+    super.key,
+    required this.gatheringId,
+    required this.fallbackNames,
+  });
+
+  @override
+  State<_LiveAttendees> createState() => _LiveAttendeesState();
+}
+
+class _LiveAttendeesState extends State<_LiveAttendees> {
+  late final _stream = watchAttendees(
+    widget.gatheringId,
+    fallbackNames: widget.fallbackNames,
+  );
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<AttendeeModel>>(
+    stream: _stream,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        debugPrint('Attendance read failed: ${snapshot.error}');
+        final error = snapshot.error;
+        if (error is FirebaseException &&
+            (error.code == 'unavailable' || error.code == 'deadline-exceeded') &&
+            widget.fallbackNames.isNotEmpty) {
+          return Column(
+            children: [
+              const Text('Showing previously loaded names.'),
+              Expanded(child: _attendanceList(widget.fallbackNames)),
+            ],
+          );
+        }
+        return const Center(child: Text('Could not load attendance.'));
+      }
+      if (!snapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return _attendanceList(snapshot.data!.map((a) => a.name).toList());
+    },
+  );
+}
+
+Widget _attendanceList(List<String> names) {
+  if (names.isEmpty) return const Center(child: Text('No attendee names available.'));
+  return ListView.builder(
+    itemCount: names.length,
+    itemBuilder: (context, index) => ListTile(
+      leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+      title: Text(names[index]),
     ),
   );
 }

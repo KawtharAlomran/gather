@@ -1,3 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+DateTime? parseDate(dynamic value) {
+  if (value == null) return null;
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  return DateTime.parse(value as String);
+}
 
 class Gathering {
   final String id;
@@ -38,12 +46,8 @@ class Gathering {
           .toList(),
 
       // New creation fields
-      startDate: json['startDate'] == null
-          ? null
-          : DateTime.parse(json['startDate'] as String),
-      endDate: json['endDate'] == null
-          ? null
-          : DateTime.parse(json['endDate'] as String),
+      startDate: parseDate(json['startDate']),
+      endDate: parseDate(json['endDate']),
       minBudget: (json['minBudget'] as num?)?.toDouble(),
       maxBudget: (json['maxBudget'] as num?)?.toDouble(),
       activities: (json['activities'] as List? ?? [])
@@ -158,7 +162,10 @@ class GatheringModel {
           json['creatorId'] as String? ??
           json['creatorEmail'] as String? ??
           '',
-      attendingCount: json['attendingCount'] as int? ?? 0,
+      attendingCount: gatheringParticipantIds(json)?.length
+          ?? (json['attendingCount'] as int?)
+          ?? (json['attendeeNames'] as List?)?.length
+          ?? 0,
       place: json['place'] as String?,
       status:
           json['status'] as String? ??
@@ -168,9 +175,7 @@ class GatheringModel {
       attendeeNames: (json['attendeeNames'] as List? ?? [])
           .map((name) => name.toString())
           .toList(),
-      dateTime: json['dateTime'] == null
-          ? null
-          : DateTime.parse(json['dateTime'] as String),
+      dateTime: parseDate(json['dateTime']),
       dateOptions: (json['dateOptions'] as List? ?? [])
           .map(
             (item) => DateOptionModel.fromJson(
@@ -182,12 +187,8 @@ class GatheringModel {
       votingEnded: json['votingEnded'] as bool? ?? false,
 
       // New creation fields
-      startDate: json['startDate'] == null
-          ? null
-          : DateTime.parse(json['startDate'] as String),
-      endDate: json['endDate'] == null
-          ? null
-          : DateTime.parse(json['endDate'] as String),
+      startDate: parseDate(json['startDate']),
+      endDate: parseDate(json['endDate']),
       minBudget: (json['minBudget'] as num?)?.toDouble(),
       maxBudget: (json['maxBudget'] as num?)?.toDouble(),
       activities: (json['activities'] as List? ?? [])
@@ -240,11 +241,13 @@ class DateOptionModel {
 
   // Create a DateOptionModel object from JSON.
   factory DateOptionModel.fromJson(Map<String, dynamic> json) {
+    final date = parseDate(json['dateTime'])!;
     return DateOptionModel(
       id: json['id'] as String,
-      label: json['label'] as String,
-      dateTime: DateTime.parse(json['dateTime'] as String),
-      votes: json['votes'] as int,
+      label: json['label'] as String? ??
+          '${date.day}/${date.month}/${date.year}',
+      dateTime: date,
+      votes: (json['votes'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -255,4 +258,15 @@ class DateOptionModel {
     'dateTime': dateTime.toUtc().toIso8601String(),
     'votes': votes,
   };
+}
+
+// Null means a legacy record with no membership array; [] means nobody is attending.
+List<String>? gatheringParticipantIds(Map<String, dynamic> data) {
+  final ids = data['participantIds'];
+  if (ids == null) return null;
+  return (ids as List)
+      .whereType<String>()
+      .where((uid) => uid.trim().isNotEmpty)
+      .toSet()
+      .toList();
 }
