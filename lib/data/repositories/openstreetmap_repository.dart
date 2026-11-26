@@ -19,7 +19,7 @@ class OpenStreetMapRepository {
   way["amenity"="restaurant"]
     (around:1000,$latitude,$longitude);
 );
-out center 5;
+out center 3;
 ''';
 
     final response = await http
