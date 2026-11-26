@@ -1,13 +1,15 @@
-
-import 'dart:convert';
+// import 'dart:convert';
+// import 'package:flutter/services.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/services.dart';
 
 import '../../models/gathering_model.dart';
 
-// Defines the operations for managing gatherings.
+/*
+// Legacy repository interface.
+// Commented out after migrating to Firebase.
+
 abstract class GatheringRepository {
   Future<List<Gathering>> getGatherings();
 
@@ -20,7 +22,8 @@ abstract class GatheringRepository {
   Future<void> deleteGathering(String gatheringId);
 }
 
-// Temporary repository using local JSON data.
+// Legacy repository using local JSON data.
+// No longer needed after migrating to Firebase.
 class MockGatheringRepository implements GatheringRepository {
   List<Gathering>? _gatherings;
 
@@ -118,6 +121,7 @@ class MockGatheringRepository implements GatheringRepository {
     _gatherings!.removeAt(index);
   }
 }
+*/
 
 // Remove the current user from a gathering in Firebase.
 // The gathering itself remains available to other participants.
