@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'NotificationPage.dart';
 import 'create_gathering_screen.dart';
@@ -23,14 +25,23 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Mock user ID. Replace with the logged-in user's ID later.
-  final String currentUserId = 'user-manar';
   String _search = '';
+  String? _streamUserId;
+  Stream<List<GatheringModel>>? _gatheringsStream;
 
   String? get currentUserId =>
       FirebaseAuth.instance.currentUser?.uid;
 
   // Listen to gatherings belonging to the current user.
+  // Cache the stream to avoid reconnecting on each rebuild.
+  Stream<List<GatheringModel>> _streamForUser(String userId) {
+    if (_gatheringsStream == null || _streamUserId != userId) {
+      _streamUserId = userId;
+      _gatheringsStream = _watchGatherings(userId);
+    }
+    return _gatheringsStream!;
+  }
+
   Stream<List<GatheringModel>> _watchGatherings(String userId) {
     return FirebaseFirestore.instance
         .collection('gatherings')
@@ -41,10 +52,15 @@ class _HomePageState extends State<HomePage> {
         .snapshots()
         .map((snapshot) {
           return snapshot.docs.map((document) {
-            return GatheringModel.fromJson({
-              ...document.data(),
-              'id': document.id,
-            });
+            try {
+              return GatheringModel.fromJson({
+                ...document.data(),
+                'id': document.id,
+              });
+            } catch (error) {
+              debugPrint('Invalid gathering ${document.id}: $error');
+              rethrow;
+            }
           }).toList();
         });
   }
@@ -176,25 +192,25 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : StreamBuilder<List<GatheringModel>>(
-              stream: _watchGatherings(userId),
+              stream: _streamForUser(userId),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  debugPrint(
+                    'Failed to load gatherings: ${snapshot.error}',
+                  );
+                  final error = snapshot.error;
+                  final message = error is FirebaseException &&
+                          error.code == 'permission-denied'
+                      ? 'Firestore access denied. Check gathering rules.'
+                      : 'Failed to load gatherings. Check Debug Console.';
+                  return Center(child: Text(message));
+                }
+
                 if (snapshot.connectionState ==
                         ConnectionState.waiting &&
                     !snapshot.hasData) {
                   return const Center(
                     child: CircularProgressIndicator(),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  debugPrint(
-                    'Failed to load gatherings: ${snapshot.error}',
-                  );
-
-                  return const Center(
-                    child: Text(
-                      'Failed to load gatherings.',
-                    ),
                   );
                 }
 
