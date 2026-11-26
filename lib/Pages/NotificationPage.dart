@@ -1,58 +1,74 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/notification_model.dart';
+import '../data/repositories/notification_repository.dart';
 import '../shared_widgets/app_card.dart';
-import '../states/notification_read_state.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
   @override
-  State<NotificationsPage> createState() => _NotificationsPageState();
+  State<NotificationsPage> createState() =>
+      _NotificationsPageState();
 }
 
-class _NotificationsPageState extends State<NotificationsPage> {
-  late Future<List<NotificationModel>> _notifications;
+class _NotificationsPageState
+    extends State<NotificationsPage> {
+
+  final NotificationRepository _repository =
+      NotificationRepository();
+
+  late Stream<List<NotificationModel>> _notifications;
 
   @override
   void initState() {
     super.initState();
-    _notifications = _loadNotifications();
-    NotificationReadState.load();
+    _notifications = _repository.watchNotifications();
   }
 
-  Future<List<NotificationModel>> _loadNotifications() async {
-    final data = await rootBundle.loadString('lib/data/notification.json');
-    final decoded = jsonDecode(data);
-
-    if (decoded is! List) {
-      throw const FormatException('Notification data must be a JSON list.');
-    }
-
-    return decoded
-        .map((item) => NotificationModel.fromMap(
-              Map<String, dynamic>.from(item as Map),
-              '',
-            ))
-        .toList();
-  }
-
-  Future<void> _reloadNotifications() async {
-    final reload = _loadNotifications();
-
-    setState(() {
-      _notifications = reload;
-    });
-
+  Future<void> _markAsRead(
+    NotificationModel notification,
+  ) async {
     try {
-      await reload;
-    } catch (error, stackTrace) {
-      debugPrint('Failed to reload notifications: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      await _repository.markAsRead(notification.id);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not mark notification as read: $error',
+          ),
+        ),
+      );
     }
+  }
+
+  Future<void> _deleteNotification(
+    NotificationModel notification,
+  ) async {
+    try {
+      await _repository.deleteNotification(
+        notification.id,
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not remove notification: $error',
+          ),
+        ),
+      );
+    }
+  }
+
+  void _reloadNotifications() {
+    setState(() {
+      _notifications = _repository.watchNotifications();
+    });
   }
 
   @override
@@ -62,85 +78,91 @@ class _NotificationsPageState extends State<NotificationsPage> {
         automaticallyImplyLeading: true,
         title: const Text('Notifications'),
       ),
-      body: FutureBuilder<List<NotificationModel>>(
-        future: _notifications,
+      body: StreamBuilder<List<NotificationModel>>(
+        stream: _notifications,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                const SizedBox(height: 48),
-                const Center(child: Text('Unable to load notifications.')),
-                Center(
-                  child: TextButton(
+            debugPrint(
+              'Failed to load notifications: ${snapshot.error}',
+            );
+
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Unable to load notifications.',
+                  ),
+                  TextButton(
                     onPressed: _reloadNotifications,
                     child: const Text('Try again'),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           }
 
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
-          return RefreshIndicator(
-            onRefresh: _reloadNotifications,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                for (final notification in snapshot.data!)
-                  AppCard(
-                    onTap: () {
-                      NotificationReadState.markRead(
-                        notification.heading,
-                        notification.date,
-                      );
-                      setState(() {});
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: Row(
+          final notifications = snapshot.data!;
+
+          if (notifications.isEmpty) {
+            return const Center(
+              child: Text('No notifications'),
+            );
+          }
+
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              for (final notification in notifications)
+                AppCard(
+                  onTap: () => _markAsRead(notification),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
                               children: [
-                                if (NotificationReadState.isUnread(
-                                  notification.heading,
-                                  notification.date,
-                                )) ...[
-                                  const Icon(Icons.circle, color: Colors.red, size: 9),
+                                if (!notification.isRead) ...[
+                                  const Icon(
+                                    Icons.circle,
+                                    color: Colors.red,
+                                    size: 9,
+                                  ),
                                   const SizedBox(width: 8),
                                 ],
-                                Expanded(child: Text(notification.heading)),
+                                Expanded(
+                                  child: Text(
+                                    notification.heading,
+                                  ),
+                                ),
                               ],
-                            )),
-                            Text(timeAgo(notification.date)),
-                            IconButton(
-                              onPressed: () {
-                                NotificationReadState.markRead(
-                                  notification.heading,
-                                  notification.date,
-                                );
-                                setState(() {
-                                  final remaining = List<NotificationModel>.of(
-                                    snapshot.data!,
-                                  )..remove(notification);
-                                  _notifications = Future.value(remaining);
-                                });
-                              },
-                              tooltip: 'Remove notification',
-                              icon: const Icon(Icons.close),
                             ),
-                          ],
-                        ),
-                        Text(notification.caption),
-                      ],
-                    ),
+                          ),
+                          Text(timeAgo(notification.date)),
+                          IconButton(
+                            onPressed: () =>
+                                _deleteNotification(
+                              notification,
+                            ),
+                            tooltip: 'Remove notification',
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                      Text(notification.caption),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ],
           );
         },
       ),
@@ -166,5 +188,6 @@ String timeAgo(DateTime date) {
   }
 
   final weeks = difference.inDays ~/ 7;
+
   return '$weeks week${weeks == 1 ? '' : 's'} ago';
 }
