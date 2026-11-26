@@ -1,21 +1,29 @@
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'
+    as firebase_auth;
 import 'package:flutter/services.dart';
-import 'package:crypto/crypto.dart';
+
 import '../../models/user_model.dart';
 
 // Defines the operations for accessing user data.
 abstract class UserRepository {
   Future<List<User>> getUsers();
+
   Future<User?> getUserById(String userId);
+
+  Future<User?> findUserByEmail(String email);
+
   Future<User?> login(String email, String password);
+
   Future<User?> signUp(
-  String firstName,
-  String lastName,
-  String email,
-  String password,
-);
+    String firstName,
+    String lastName,
+    String email,
+    String password,
+  );
 }
 
 // Temporary repository using local JSON data.
@@ -41,9 +49,6 @@ class MockUserRepository implements UserRepository {
         )
         .toList();
   }
-  String _hashPassword(String password) {
-    return sha256.convert(utf8.encode(password)).toString();
-  }
 
   @override
   Future<List<User>> getUsers() async {
@@ -63,41 +68,34 @@ class MockUserRepository implements UserRepository {
 
     return null;
   }
+
+  // Search local sample users by exact email.
   @override
-Future<User?> login(String email, String password) async {
-  await _loadUsers();
+  Future<User?> findUserByEmail(String email) async {
+    await _loadUsers();
 
-  final enteredEmail = email.trim().toLowerCase();
-  final enteredPasswordHash = _hashPassword(password);
+    final normalizedEmail = email.trim().toLowerCase();
 
-  for (final user in _users!) {
-    final isSameEmail = user.email.toLowerCase() == enteredEmail;
-    //final isSamePassword = user.passwordHash == enteredPasswordHash;
+    for (final user in _users!) {
+      if (user.email.trim().toLowerCase() ==
+          normalizedEmail) {
+        return user;
+      }
+    }
 
-    // if (isSameEmail && isSamePassword) {
-    //   return user;
-    // }
+    return null;
   }
 
-  return null;
-}
-@override
-Future<User?> signUp(
-  String firstName,
-  String lastName,
-  String email,
-  String password,
-) async {
-  return null;
-}
-}
-
-class FirebaseUserRepository implements UserRepository {
-  final firebase_auth.FirebaseAuth _auth =
-      firebase_auth.FirebaseAuth.instance;
-
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+  // Authentication is not supported by the mock repository.
+  @override
+  Future<User?> login(
+    String email,
+    String password,
+  ) async {
+    throw UnsupportedError(
+      'Use FirebaseUserRepository for authentication.',
+    );
+  }
 
   @override
   Future<User?> signUp(
@@ -106,37 +104,94 @@ class FirebaseUserRepository implements UserRepository {
     String email,
     String password,
   ) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
+    throw UnsupportedError(
+      'Use FirebaseUserRepository for registration.',
+    );
+  }
+}
+
+// Firebase implementation of UserRepository.
+class FirebaseUserRepository implements UserRepository {
+  final firebase_auth.FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
+
+  FirebaseUserRepository({
+    firebase_auth.FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+  })  : _auth = auth ?? firebase_auth.FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
+
+  // Normalize emails for consistent searching.
+  String _normalizeEmail(String email) {
+    return email.trim().toLowerCase();
+  }
+
+  // Register a user and save their profile.
+  @override
+  Future<User?> signUp(
+    String firstName,
+    String lastName,
+    String email,
+    String password,
+  ) async {
+    final normalizedEmail = _normalizeEmail(email);
+
+    final credential =
+        await _auth.createUserWithEmailAndPassword(
+      email: normalizedEmail,
       password: password,
     );
 
     final firebaseUser = credential.user;
 
     if (firebaseUser == null) {
-      return null;
+      throw StateError('Unable to create user account.');
     }
 
     final user = User(
       id: firebaseUser.uid,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      email: email.trim(),
+      email: normalizedEmail,
       avatar: null,
     );
 
-    await _firestore
+    final batch = _firestore.batch();
+
+    final userRef = _firestore
         .collection('users')
-        .doc(firebaseUser.uid)
-        .set(user.toMap());
+        .doc(firebaseUser.uid);
+
+    final directoryRef = _firestore
+        .collection('user_directory')
+        .doc(firebaseUser.uid);
+
+    // Save the private user profile.
+    batch.set(userRef, user.toMap());
+
+    // Save limited searchable account information.
+    batch.set(directoryRef, {
+      'displayName':
+          '${firstName.trim()} ${lastName.trim()}',
+      'email': normalizedEmail,
+      'searchable': true,
+    });
+
+    // Save both documents atomically.
+    await batch.commit();
 
     return user;
   }
 
+  // Sign in using Firebase Authentication.
   @override
-  Future<User?> login(String email, String password) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
+  Future<User?> login(
+    String email,
+    String password,
+  ) async {
+    final credential =
+        await _auth.signInWithEmailAndPassword(
+      email: _normalizeEmail(email),
       password: password,
     );
 
@@ -149,6 +204,7 @@ class FirebaseUserRepository implements UserRepository {
     return getUserById(firebaseUser.uid);
   }
 
+  // Get a user profile by UID.
   @override
   Future<User?> getUserById(String userId) async {
     final document = await _firestore
@@ -160,23 +216,82 @@ class FirebaseUserRepository implements UserRepository {
       return null;
     }
 
-    return User.fromMap(document.data()!, document.id);
+    return User.fromMap(
+      document.data()!,
+      document.id,
+    );
   }
 
+  // Search for a registered user by exact email.
   @override
-  Future<List<User>> getUsers() async {
+  Future<User?> findUserByEmail(String email) async {
+    final normalizedEmail = _normalizeEmail(email);
+
+    if (normalizedEmail.isEmpty) {
+      return null;
+    }
+
     final snapshot = await _firestore
-        .collection('users')
+        .collection('user_directory')
+        .where('email', isEqualTo: normalizedEmail)
+        .where('searchable', isEqualTo: true)
+        .limit(1)
         .get();
 
-    return snapshot.docs
-        .map(
-          (document) => User.fromMap(
-            document.data(),
-            document.id,
-          ),
-        )
-        .toList();
+    if (snapshot.docs.isEmpty) {
+      return null;
+    }
+
+    final document = snapshot.docs.first;
+    final data = document.data();
+
+    final displayName =
+        (data['displayName'] as String? ?? '').trim();
+
+    final nameParts = displayName.split(
+      RegExp(r'\s+'),
+    );
+
+    final firstName =
+        nameParts.isNotEmpty ? nameParts.first : '';
+
+    final lastName = nameParts.length > 1
+        ? nameParts.skip(1).join(' ')
+        : '';
+
+    return User(
+      id: document.id,
+      firstName: firstName,
+      lastName: lastName,
+      email: data['email'] as String? ?? normalizedEmail,
+      avatar: null,
+    );
+  }
+
+  // Return the current user's private profile.
+  //
+  // This does not enumerate all registered users because
+  // their private profiles are protected by Firestore rules.
+  @override
+  Future<List<User>> getUsers() async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      throw StateError('User is not authenticated.');
+    }
+
+    final user = await getUserById(currentUser.uid);
+
+    return user == null ? [] : [user];
   }
 }
+
+// Notes:
+// - Firebase Authentication generates unique user UIDs.
+// - Private profiles are stored in users/{uid}.
+// - Searchable profiles are stored in user_directory/{uid}.
+// - Email searches use exact matching.
+// - No hardcoded user IDs are required.
+// - Friends functionality will be integrated later.
+// - Firestore Security Rules must protect both collections.
 
