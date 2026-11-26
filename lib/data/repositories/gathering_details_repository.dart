@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -27,12 +28,16 @@ class MockGatheringRepository implements GatheringRepository {
   Future<void> _loadGatherings() async {
     if (_gatherings != null) return;
 
-    final jsonString = await rootBundle.loadString('lib/data/gatherings.json');
+    final jsonString = await rootBundle.loadString(
+      'lib/data/gatherings.json',
+    );
 
     final List<dynamic> jsonData = jsonDecode(jsonString);
 
     _gatherings = jsonData
-        .map((item) => Gathering.fromJson(item as Map<String, dynamic>))
+        .map((item) => Gathering.fromJson(
+              item as Map<String, dynamic>,
+            ))
         .toList();
   }
 
@@ -62,10 +67,14 @@ class MockGatheringRepository implements GatheringRepository {
   Future<Gathering> createGathering(Gathering gathering) async {
     await _loadGatherings();
 
-    final exists = _gatherings!.any((item) => item.id == gathering.id);
+    final exists = _gatherings!.any(
+      (item) => item.id == gathering.id,
+    );
 
     if (exists) {
-      throw StateError('Gathering already exists: ${gathering.id}');
+      throw StateError(
+        'Gathering already exists: ${gathering.id}',
+      );
     }
 
     _gatherings!.add(gathering);
@@ -77,10 +86,14 @@ class MockGatheringRepository implements GatheringRepository {
   Future<Gathering> updateGathering(Gathering gathering) async {
     await _loadGatherings();
 
-    final index = _gatherings!.indexWhere((item) => item.id == gathering.id);
+    final index = _gatherings!.indexWhere(
+      (item) => item.id == gathering.id,
+    );
 
     if (index == -1) {
-      throw StateError('Gathering not found: ${gathering.id}');
+      throw StateError(
+        'Gathering not found: ${gathering.id}',
+      );
     }
 
     _gatherings![index] = gathering;
@@ -92,34 +105,41 @@ class MockGatheringRepository implements GatheringRepository {
   Future<void> deleteGathering(String gatheringId) async {
     await _loadGatherings();
 
-    final index = _gatherings!.indexWhere((item) => item.id == gatheringId);
+    final index = _gatherings!.indexWhere(
+      (item) => item.id == gatheringId,
+    );
 
     if (index == -1) {
-      throw StateError('Gathering not found: $gatheringId');
+      throw StateError(
+        'Gathering not found: $gatheringId',
+      );
     }
 
     _gatherings!.removeAt(index);
   }
 }
 
-//
-// - Gathering data is loaded from lib/data/gatherings.json.
-// - JSON data is loaded once per repository instance.
-// - Create, update, and delete operations modify in-memory data.
-// - Changes are not persisted after the repository is recreated.
-// - The repository can later integrate API and local caching.
-// - Compatible with BLoC, Cubit, and Provider.
-
-
-// Session-level removal for mock JSON data. Asset files cannot be edited at runtime.
-final Set<String> _leftGatheringIds = <String>{};
-
+// Remove the current user from a gathering in Firebase.
+// The gathering itself remains available to other participants.
 Future<void> leaveGathering(String gatheringId) async {
-  _leftGatheringIds.add(gatheringId);
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null) {
+    throw StateError('User is not signed in.');
+  }
+
+  await FirebaseFirestore.instance
+      .collection('gatherings')
+      .doc(gatheringId)
+      .update({
+    'participantIds': FieldValue.arrayRemove([user.uid]),
+  });
 }
 
+// Load gatherings that the current user participates in.
 Future<List<GatheringModel>> loadGatherings() async {
   final user = FirebaseAuth.instance.currentUser;
+
   if (user == null) {
     throw StateError('Sign in to Gather to see your gatherings.');
   }

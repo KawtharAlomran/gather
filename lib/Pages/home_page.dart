@@ -1,7 +1,5 @@
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import 'NotificationPage.dart';
 import 'create_gathering_screen.dart';
@@ -25,6 +23,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Mock user ID. Replace with the logged-in user's ID later.
+  final String currentUserId = 'user-manar';
   String _search = '';
 
   String? get currentUserId =>

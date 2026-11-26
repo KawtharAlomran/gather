@@ -3,6 +3,9 @@
 // view attendance, and leave the gathering.
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/vote_model.dart';
+import '../data/repositories/vote_repository.dart';
 
 import '../models/gathering_model.dart';
 import '../shared_widgets/app_card.dart';
@@ -32,24 +35,81 @@ class InviteeGatheringPage extends StatefulWidget {
 }
 
 class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
+  final _repository = VoteRepository();
+  late Stream<List<Vote>> _votes;
   String? _selectedOptionId;
+  bool _hasDraft = false;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedOptionId = widget.gathering.selectedOptionId;
+    _votes = _repository.watchVotes(widget.gathering.id, targetType: 'datetime');
   }
 
-  Future<void> _saveVote() async {
-    final id = _selectedOptionId;
-    if (id == null || _saving) return;
+  Future<void> _saveVote(String? id) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (_saving || widget.gathering.votingEnded) return;
+    if (user == null) {
+      AppMessage.show(context, message: 'Please sign in first.', type: MessageType.error);
+      return;
+    }
     setState(() => _saving = true);
-    setState(() {
-      widget.gathering.selectedOptionId = id;
-      _saving = false;
-    });
-    AppMessage.show(context, message: 'Your date preference has been saved.');
+    try {
+      if (id == null) {
+        await _repository.deleteVote(gatheringId: widget.gathering.id,
+          userId: user.uid, targetType: 'datetime');
+      } else {
+        await _repository.saveVote(gatheringId: widget.gathering.id,
+          userId: user.uid, targetId: id, targetType: 'datetime');
+      }
+      if (!mounted) return;
+      setState(() => _hasDraft = false);
+      AppMessage.show(context, message: id == null ? 'Your vote has been removed.' : 'Your date preference has been saved.');
+    } catch (error) {
+      debugPrint('Vote write failed: $error');
+      if (mounted) AppMessage.show(context, message: 'Could not update vote: $error', type: MessageType.error);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _buildVoting(GatheringModel gathering) {
+    return StreamBuilder<List<Vote>>(
+      stream: _votes,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Text('Could not load votes: ${snapshot.error}');
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        final counts = <String, int>{};
+        String? savedOption;
+        final validIds = gathering.dateOptions.map((o) => o.id).toSet();
+        for (final vote in snapshot.data!) {
+          if (!validIds.contains(vote.targetId)) continue;
+          counts.update(vote.targetId, (n) => n + 1, ifAbsent: () => 1);
+          if (vote.userId == uid) savedOption = vote.targetId;
+        }
+        final options = gathering.dateOptions.map((o) => DateOptionModel(
+          id: o.id, label: o.label, dateTime: o.dateTime, votes: counts[o.id] ?? 0,
+        )).toList();
+        final selected = _hasDraft ? _selectedOptionId : savedOption;
+        final enabled = !_saving && !gathering.votingEnded && uid != null;
+        return Column(children: [
+          GatheringVoteSelection(
+            options: options,
+            totalVotes: counts.values.fold<int>(0, (a, b) => a + b),
+            selectedOptionId: selected,
+            onSelected: (id) {
+              if (enabled) setState(() { _selectedOptionId = id; _hasDraft = true; });
+            },
+            onSave: enabled && selected != null ? () => _saveVote(selected) : null,
+          ),
+          if (savedOption != null && !gathering.votingEnded)
+            TextButton(onPressed: enabled ? () => _saveVote(null) : null,
+              child: const Text('Remove my vote')),
+        ]);
+      },
+    );
   }
 
   Future<void> _leave() async {
@@ -98,13 +158,7 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
                 ),
                 const SizedBox(height: 16),
                 if (isPlanning && gathering.dateOptions.isNotEmpty)
-                  GatheringVoteSelection(
-                    options: gathering.dateOptions,
-                    totalVotes: gathering.totalVotes,
-                    selectedOptionId: _selectedOptionId,
-                    onSelected: (id) => setState(() => _selectedOptionId = id),
-                    onSave: _selectedOptionId == null || _saving ? null : _saveVote,
-                  )
+                  _buildVoting(gathering)
                 else
                   AppCard(
                     child: Column(

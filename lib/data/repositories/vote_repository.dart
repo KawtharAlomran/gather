@@ -78,6 +78,23 @@ class VoteRepository {
     }).toList();
   }
 
+  // Live votes for one gathering and category.
+  Stream<List<Vote>> watchVotes(String gatheringId, {required String targetType}) {
+    return _firestore.collection('votes')
+        .where('gatheringId', isEqualTo: gatheringId)
+        .where('targetType', isEqualTo: targetType)
+        .snapshots().map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data();
+          return Vote(
+            id: doc.id,
+            gatheringId: data['gatheringId'] as String,
+            userId: data['userId'] as String,
+            targetId: data['targetId'] as String,
+            targetType: data['targetType'] as String,
+          );
+        }).toList());
+  }
+
   // Deletes the user's vote for a category.
   Future<void> deleteVote({
     required String gatheringId,

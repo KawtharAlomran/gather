@@ -3,6 +3,9 @@
 // and update gathering preferences.
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/vote_model.dart';
+import '../data/repositories/vote_repository.dart';
 
 import '../models/gathering_model.dart';
 import '../shared_widgets/app_button.dart';
@@ -37,6 +40,46 @@ class CreatorGatheringPage extends StatefulWidget {
 }
 
 class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
+  final _voteRepository = VoteRepository();
+  late Stream<List<Vote>> _votes;
+  bool _savingVote = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeVotes();
+  }
+
+  void _subscribeVotes() {
+    _votes = _voteRepository.watchVotes(widget.gathering.id, targetType: 'datetime');
+  }
+
+  @override
+  void didUpdateWidget(covariant CreatorGatheringPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.gathering.id != widget.gathering.id) _subscribeVotes();
+  }
+
+  Future<void> _changeVote(String? optionId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || _savingVote || widget.gathering.votingEnded) return;
+    setState(() => _savingVote = true);
+    try {
+      if (optionId == null) {
+        await _voteRepository.deleteVote(gatheringId: widget.gathering.id,
+          userId: user.uid, targetType: 'datetime');
+      } else {
+        await _voteRepository.saveVote(gatheringId: widget.gathering.id,
+          userId: user.uid, targetId: optionId, targetType: 'datetime');
+      }
+    } catch (error) {
+      debugPrint('Vote write failed: $error');
+      if (mounted) AppMessage.show(context, message: 'Could not update vote.', type: MessageType.error);
+    } finally {
+      if (mounted) setState(() => _savingVote = false);
+    }
+  }
+
   void _endVoting() {
     final gathering = widget.gathering;
     if (gathering.votingEnded) return;
@@ -86,29 +129,55 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
                   ),
                   const SizedBox(height: 16),
                   AppCard(
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
+                    child: StreamBuilder<List<Vote>>(
+                      stream: _votes,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return const Text('Could not load votes.');
+                        }
+                        if (!snapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        final counts = <String, int>{};
+                        String? selected;
+                        final optionIds = gathering.dateOptions.map((o) => o.id).toSet();
+                        for (final vote in snapshot.data!) {
+                          if (!optionIds.contains(vote.targetId)) continue;
+                          counts.update(vote.targetId, (n) => n + 1, ifAbsent: () => 1);
+                          if (vote.userId == uid) selected = vote.targetId;
+                        }
+                        final total = counts.values.fold<int>(0, (a, b) => a + b);
+                        final canVote = uid != null && !_savingVote && !gathering.votingEnded;
+                        return Column(children: [
+                          Row(children: [
                             const Expanded(child: Text('Vote: Best Date')),
-                            Text('Votes cast: ${gathering.totalVotes}'),
-                          ],
-                        ),
-                        for (final option in gathering.dateOptions)
-                          RadioListTile<String>(
-                            value: option.id,
-                            groupValue: gathering.selectedOptionId,
-                            title: Text(option.label),
-                            secondary: Text('Votes: ${option.votes}'),
-                            onChanged: null,
+                            Text('Votes cast: $total'),
+                          ]),
+                          for (final option in gathering.dateOptions)
+                            RadioListTile<String>(
+                              value: option.id,
+                              groupValue: selected,
+                              title: Text(option.label),
+                              secondary: Text('Votes: ${counts[option.id] ?? 0}'),
+                              onChanged: canVote ? _changeVote : null,
+                            ),
+                          if (selected != null)
+                            TextButton(onPressed: canVote ? () => _changeVote(null) : null,
+                              child: const Text('Remove my vote')),
+                          AppButton(
+                            text: 'End Voting',
+                            onPressed: gathering.votingEnded || gathering.dateOptions.isEmpty || _savingVote
+                                ? null : () {
+                                  for (final option in gathering.dateOptions) {
+                                    option.votes = counts[option.id] ?? 0;
+                                  }
+                                  gathering.selectedOptionId = selected;
+                                  _endVoting();
+                                },
                           ),
-                        AppButton(
-                          text: 'End Voting',
-                          onPressed: gathering.votingEnded || gathering.dateOptions.isEmpty
-                              ? null
-                              : _endVoting,
-                        ),
-                      ],
+                        ]);
+                      },
                     ),
                   ),
                   const SizedBox(height: 22),
