@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_text_field.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../data/repositories/user_repository.dart';
+import '../shared_widgets/app_message.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -34,14 +37,54 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  final UserRepository _userRepository = FirebaseUserRepository();
+  bool isLoading = false;
+  
   // Validate the form and return to Login after successful validation.
-  void _signUp() {
-    // Continue only when all fields contain valid input.
-    if (_formKey.currentState!.validate()) {
-      // Return to the login screen after sign up validation.
+  Future<void> _signUp() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await _userRepository.signUp(
+        _firstNameController.text,
+        _lastNameController.text,
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      AppMessage.show(
+        context,
+        message: 'Account created successfully.',
+        type: MessageType.success,
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      AppMessage.show(
+        context,
+        message: error.message ?? 'Could not create the account.',
+        type: MessageType.error,
       );
     }
   }
@@ -162,7 +205,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 24),
 
-                AppButton(text: 'Sign Up', onPressed: _signUp),
+                AppButton(text: 'Sign Up', onPressed: _signUp, isLoading: isLoading,),
 
                 const SizedBox(height: 16),
 

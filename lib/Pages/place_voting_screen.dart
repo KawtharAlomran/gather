@@ -12,7 +12,7 @@ class PlaceVotingScreen extends StatefulWidget {
 }
 
 class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
-  final PlaceRepository placeRepository = MockPlaceRepository();
+  final PlaceRepository placeRepository = FirebasePlaceRepository(); // Use the mock repository for testing
 
   List<Place> places = []; // List to hold the loaded places
   String? votedPlaceId; // Store the ID of the place the user has voted for
@@ -107,7 +107,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
 
   // Build the UI for a single place card
   Widget buildPlaceCard(Place place) {
-    final bool isVoted = votedPlaceId == place.id;
+    final bool isVoted = votedPlaceId == place.googlePlaceId;
     final colors = Theme.of(context).colorScheme;
     final imagePath = place.image;
 
@@ -176,7 +176,7 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
                     backgroundColor:
                         // Change the button color based on whether the user has voted for this place
                         isVoted ? colors.primary : colors.secondary, 
-                    onPressed: () => vote(place.id),
+                    onPressed: () => vote(place.googlePlaceId),
                   ),
                 ),
               ],

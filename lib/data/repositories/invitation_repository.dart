@@ -1,6 +1,7 @@
 
-import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../models/invitation_model.dart';
 
 // Defines the operations for managing invitations.
@@ -12,35 +13,43 @@ abstract class InvitationRepository {
   Future<InvitationModel> declineInvitation(String invitationId);
 }
 
-// Mock implementation using local JSON data.
-class MockInvitationRepository implements InvitationRepository {
-  List<InvitationModel>? _invitations;
+// Firestore implementation of InvitationRepository.
+class FirestoreInvitationRepository implements InvitationRepository {
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  // Load invitations from JSON only once per repository instance.
-  Future<void> _loadInvitations() async {
-    if (_invitations != null) return;
+  FirestoreInvitationRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
 
-    final jsonString = await rootBundle.loadString(
-      'lib/data/invitations.json',
-    );
+  CollectionReference<Map<String, dynamic>> get _invitations =>
+      _firestore.collection('invitations');
 
-    final List<dynamic> jsonData = jsonDecode(jsonString);
+  // Get the authenticated user's UID.
+  String get _currentUserId {
+    final user = _auth.currentUser;
 
-    _invitations = jsonData
-        .map(
-          (item) => InvitationModel.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
-        .toList();
+    if (user == null) {
+      throw StateError('User is not authenticated.');
+    }
+
+    return user.uid;
   }
 
-  // Return the current list of invitations.
+  // Get invitations belonging to the current user only.
   @override
   Future<List<InvitationModel>> getInvitations() async {
-    await _loadInvitations();
+    final userId = _currentUserId;
 
-    return List.unmodifiable(_invitations!);
+    final snapshot = await _invitations
+        .where('inviteeId', isEqualTo: userId)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => InvitationModel.fromFirestore(doc))
+        .toList();
   }
 
   // Accept an invitation.
@@ -65,34 +74,59 @@ class MockInvitationRepository implements InvitationRepository {
     );
   }
 
-  // Update the invitation status in memory.
+  // Update an invitation only if it belongs to the current user.
   Future<InvitationModel> _updateStatus(
     String invitationId,
-    InvitationStatus status,
+    InvitationStatus newStatus,
   ) async {
-    await _loadInvitations();
+    final userId = _currentUserId;
+    final documentRef = _invitations.doc(invitationId);
 
-    final index = _invitations!.indexWhere(
-      (invitation) => invitation.id == invitationId,
-    );
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(documentRef);
 
-    if (index == -1) {
-      throw StateError('Invitation not found: $invitationId');
-    }
+      if (!snapshot.exists) {
+        throw StateError('Invitation not found.');
+      }
 
-    final invitation = _invitations![index];
+      final invitation = InvitationModel.fromFirestore(snapshot);
 
-    if (invitation.status != InvitationStatus.pending) {
-      throw StateError('Invitation has already been responded to.');
-    }
+      // Prevent responding to another user's invitation.
+      if (invitation.inviteeId != userId) {
+        throw StateError(
+          'You are not authorized to update this invitation.',
+        );
+      }
 
-    final updatedInvitation = invitation.copyWith(
-      status: status,
-    );
+      // Prevent responding to an invitation twice.
+      if (invitation.status != InvitationStatus.pending) {
+        throw StateError(
+          'Invitation has already been responded to.',
+        );
+      }
 
-    _invitations![index] = updatedInvitation;
+      transaction.update(documentRef, {
+        'status': newStatus.name,
+      });
 
-    return updatedInvitation;
+      return invitation.copyWith(status: newStatus);
+    });
   }
 }
 
+// Example usage:
+//
+// final repository = FirestoreInvitationRepository();
+//
+// final invitations = await repository.getInvitations();
+//
+// await repository.acceptInvitation('invitation_document_id');
+//
+// await repository.declineInvitation('invitation_document_id');
+//
+// Notes:
+// - Uses Firebase Authentication to identify the current user.
+// - Only retrieves invitations addressed to the current user.
+// - Prevents accepting or declining other users' invitations.
+// - Uses Firestore transactions to avoid duplicate responses.
+// - Firestore Security Rules must also enforce these permissions.
