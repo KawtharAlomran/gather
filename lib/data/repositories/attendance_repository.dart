@@ -1,6 +1,4 @@
 
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -20,18 +18,12 @@ Stream<List<AttendeeModel>> watchAttendees(
       .snapshots()
       .asyncMap((snapshot) async {
     final data = snapshot.data();
-
-
     if (data == null) {
-      {
       throw StateError('Gathering does not exist.');
-    }
     }
 
     // Get participant UIDs from the gathering.
     final participantIds = gatheringParticipantIds(data);
-
-    // Support older gathering documents.
 
     // Support older gatherings without participantIds.
     if (participantIds == null) {
@@ -40,20 +32,9 @@ Stream<List<AttendeeModel>> watchAttendees(
               .whereType<String>()
               .where((name) => name.trim().isNotEmpty)
               .toList();
-
-
-      final names =
-         
-          storedNames.isEmpty ? fallbackNames : storedNames;
-
-
+      final names = storedNames.isEmpty ? fallbackNames : storedNames;
       return [
         for (final entry in names.asMap().entries)
-          AttendeeModel(
-            id: 'legacy-${entry.key}',
-            name: entry.value,
-            gatheringId: gatheringId,
-          ),
           AttendeeModel(
             id: 'legacy-${entry.key}',
             name: entry.value,
@@ -136,45 +117,17 @@ Stream<List<AttendeeModel>> watchAttendees(
         }
 
         return AttendeeModel(
-    final user = FirebaseAuth.instance.currentUser;
-
-    // Retrieve each participant's name from Firebase.
-    return Future.wait(
-      ids.map((uid) async {
-        String? name;
-
-        try {
-          final userDoc = await FirebaseFirestore.instance
-              .collection('user_directory')
-              .doc(uid)
-              .get();
-
-          name = _nonEmptyName(
-            userDoc.data()?['displayName'],
-          );
-        } on FirebaseException catch (e) {
-          // Keep the attendance list available if a name
-          // cannot be retrieved.
-          print('Cannot load attendee $uid: ${e.code}');
-        }
-
-        return AttendeeModel(
           id: uid,
-          gatheringId: gatheringId,
           name: name ??
-              (uid == user?.uid
-                  ? (_nonEmptyName(user?.displayName) ?? 'You')
-                  : 'Name unavailable'),
+              (uid == currentUser?.uid ? 'You' : 'Name unavailable'),
+          gatheringId: gatheringId,
         );
       }),
     );
+
+    return attendees;
   });
 }
-
-String? _nonEmptyName(Object? value) =>
-    value is String && value.trim().isNotEmpty
-        ? value.trim()
-        : null;
 
 // One-time read for screens using the existing interface.
 Future<List<AttendeeModel>> loadAttendees(
@@ -183,11 +136,5 @@ Future<List<AttendeeModel>> loadAttendees(
   return watchAttendees(gatheringId).first;
 }
 
-// Return a trimmed, non-empty string.
-String? _nonEmptyName(Object? value) {
-  if (value is String && value.trim().isNotEmpty) {
-    return value.trim();
-  }
-
-  return null;
-}
+String? _nonEmptyName(Object? value) =>
+    value is String && value.trim().isNotEmpty ? value.trim() : null;
