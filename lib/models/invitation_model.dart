@@ -1,11 +1,6 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum InvitationStatus {
-  pending,
-  accepted,
-  declined,
-}
+enum InvitationStatus { pending, accepted, declined }
 
 class InvitationModel {
   final String id;
@@ -14,6 +9,8 @@ class InvitationModel {
   final String inviteeId;
   final InvitationStatus status;
   final DateTime? createdAt;
+  final String inviterName;
+  final String gatheringTitle;
 
   const InvitationModel({
     required this.id,
@@ -22,6 +19,8 @@ class InvitationModel {
     required this.inviteeId,
     this.status = InvitationStatus.pending,
     this.createdAt,
+    required this.inviterName,
+    required this.gatheringTitle,
   });
 
   // Create an updated copy without modifying the original.
@@ -32,6 +31,8 @@ class InvitationModel {
     String? inviteeId,
     InvitationStatus? status,
     DateTime? createdAt,
+    String? inviterName,
+    String? gatheringTitle,
   }) {
     return InvitationModel(
       id: id ?? this.id,
@@ -40,6 +41,8 @@ class InvitationModel {
       inviteeId: inviteeId ?? this.inviteeId,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      inviterName: inviterName ?? this.inviterName,
+      gatheringTitle: gatheringTitle ?? this.gatheringTitle,
     );
   }
 
@@ -63,6 +66,8 @@ class InvitationModel {
         orElse: () => InvitationStatus.pending,
       ),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      inviterName: data['inviterName'] as String? ?? '',
+      gatheringTitle: data['gatheringTitle'] as String? ?? '',
     );
   }
 
@@ -72,6 +77,8 @@ class InvitationModel {
       'gatheringId': gatheringId,
       'inviterId': inviterId,
       'inviteeId': inviteeId,
+      'inviterName': inviterName,
+      'gatheringTitle': gatheringTitle,
       'status': status.name,
       'createdAt': createdAt == null
           ? FieldValue.serverTimestamp()
@@ -79,7 +86,6 @@ class InvitationModel {
     };
   }
 }
-
 
 // Notes:
 // - The invitation ID is the Firestore document ID.

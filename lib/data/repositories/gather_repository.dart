@@ -379,11 +379,27 @@ class FirestoreGatheringRepository implements GatheringRepository {
       final invitationRef = _invitations.doc(
         invitationId,
       );
+      final organizerDocument = await _firestore
+    .collection('users')
+    .doc(organizerId)
+    .get();
+
+    final organizerData = organizerDocument.data();
+
+    final organizerName = [
+      organizerData?['firstName'],
+      organizerData?['lastName'],
+    ]
+        .whereType<String>()
+        .where((name) => name.trim().isNotEmpty)
+        .join(' ');
 
       batch.set(invitationRef, {
         'gatheringId': gatheringRef.id,
         'inviterId': organizerId,
         'inviteeId': recipientId,
+        'inviterName': organizerName,
+        'gatheringTitle': gatheringTitle,
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
       });
