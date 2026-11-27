@@ -201,11 +201,12 @@ class _InvitationPageState extends State<InvitationPage> {
   Widget _buildInvitationCard(InvitationModel invitation) {
     final inviter = _usersById[invitation.inviterId];
 
-    final inviterName = inviter?.fullName ?? 'Gather! member';
-
-    final gatheringTitle =
-        _gatheringTitles[invitation.gatheringId] ??
-        'Gathering';
+final inviterName = invitation.inviterName.isNotEmpty
+    ? invitation.inviterName
+    : 'cannot be found';
+final gatheringTitle = invitation.gatheringTitle.isNotEmpty
+    ? invitation.gatheringTitle
+    : 'Gathering';
 
     final isProcessing = _processingId == invitation.id;
     final isBusy = _processingId != null;
