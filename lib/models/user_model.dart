@@ -28,7 +28,6 @@ class User {
     );
   }
 
-  // Convert a user object into JSON.
   Map<String, dynamic> toMap() {
     return {
       'firstName': firstName,
