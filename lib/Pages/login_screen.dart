@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'signup_page.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_text_field.dart';
@@ -46,35 +46,63 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       isLoading = true;
     });
-
-    // Check the entered credentials against the local user data.
-    final user = await _userRepository.login(
-      _emailController.text,
-      _passwordController.text,
-    );
-
-    // Make sure the screen still exists before updating its state.
-    if (!mounted) return;
-
-    setState(() {
-      isLoading = false;
-    });
-
-    // Display an error if the credentials are incorrect.
-    if (user == null) {
-      AppMessage.show(
-        context,
-        message: 'Invalid email or password.',
-        type: MessageType.error,
+    // Check the entered credentials against the user data.
+    try {
+      final user = await _userRepository.login(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
-      return;
-    }
+      // Make sure the screen still exists before updating its state.
+      if (!mounted) return;
+      // Display an error if the credentials are incorrect.
+      if (user == null) {
+        AppMessage.show(
+          context,
+          message: 'Invalid email or password.',
+          type: MessageType.error,
+        );
+        return;
+      }
+
     // Open the main app navigation after a successful login.
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const BottomNavigation()),
-    );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BottomNavigation(),
+        ),
+      );
+      } on firebase_auth.FirebaseAuthException catch (error) {
+        if (!mounted) return;
+
+        String message;
+        if (error.code == 'invalid-credential' ||
+            error.code == 'wrong-password' ||
+            error.code == 'user-not-found') {
+          message = 'The email or password is incorrect.';
+        } else if (error.code == 'network-request-failed') {
+          message = 'No internet connection. Please try again.';
+        } else if (error.code == 'too-many-requests') {
+          message = 'Too many attempts. Please try again later.';
+        } else if (error.code == 'user-disabled') {
+          message = 'This account has been disabled.';
+        } else {
+          message = 'Something went wrong. Please try again.';
+        }
+
+        AppMessage.show(
+          context,
+          message: message,
+          type: MessageType.error,
+        );
+      } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
+
   Future<void> _showForgotPasswordDialog() async {
     final emailController = TextEditingController();
 
