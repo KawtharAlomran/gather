@@ -193,14 +193,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 32),
               AppButton(
                 text: 'Log out',
-                onPressed: () {
-                  // Clear the navigation stack and return to the login screen. 
+                onPressed: () async {
+                  await firebase_auth.FirebaseAuth.instance.signOut();
+
+                  if (!context.mounted) return;
+
                   Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => const LoginPage(),
-                  ),
-                  (route) => false,
-                );
+                    MaterialPageRoute(
+                      builder: (_) => const LoginPage(),
+                    ),
+                    (route) => false,
+                  );
                 },
               ),
 
