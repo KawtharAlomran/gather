@@ -230,36 +230,68 @@ class FirebaseUserRepository implements UserRepository {
     });
   }
   @override
-  Future<List<User>> getFriends(String userId) async {
-    final userDocument =
-        await _firestore.collection('users').doc(userId).get();
+  
+@override
+Future<List<User>> getFriends(String userId) async {
+  final currentUser = _auth.currentUser;
 
-    final data = userDocument.data();
-
-    if (data == null) return [];
-
-    final friendIds = List<String>.from(
-      data['friendIds'] ?? [],
+  if (currentUser == null ||
+      currentUser.uid != userId) {
+    throw StateError(
+      'You can only access your own friends list.',
     );
-
-    final friends = <User>[];
-
-    for (final friendId in friendIds) {
-      final friendDocument =
-          await _firestore.collection('users').doc(friendId).get();
-
-      if (friendDocument.exists && friendDocument.data() != null) {
-        friends.add(
-          User.fromMap(
-            friendDocument.data()!,
-            friendDocument.id,
-          ),
-        );
-      }
-    }
-
-    return friends;
   }
+
+  // Read the current user's friend IDs.
+  final userDocument = await _firestore
+      .collection('users')
+      .doc(userId)
+      .get();
+
+  final data = userDocument.data();
+
+  if (data == null) return [];
+
+  final friendIds = (data['friendIds'] as List? ?? [])
+      .whereType<String>()
+      .toSet();
+
+  final friends = <User>[];
+
+  for (final friendId in friendIds) {
+    // Read limited public profile information.
+    final friendDocument = await _firestore
+        .collection('user_directory')
+        .doc(friendId)
+        .get();
+
+    final friendData = friendDocument.data();
+
+    if (friendData == null) continue;
+
+    final displayName =
+        (friendData['displayName'] as String? ?? '').trim();
+
+    final nameParts = displayName.isEmpty
+        ? <String>[]
+        : displayName.split(RegExp(r'\s+'));
+
+    friends.add(
+      User(
+        id: friendDocument.id,
+        firstName: nameParts.isEmpty ? '' : nameParts.first,
+        lastName: nameParts.length > 1
+            ? nameParts.skip(1).join(' ')
+            : '',
+        email: friendData['email'] as String? ?? '',
+        avatar: null,
+      ),
+    );
+  }
+
+  return friends;
+}
+
 
   @override
   Future<void> addFriend(

@@ -1,5 +1,7 @@
-
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+
+import '../models/user_model.dart';
 
 import '../data/repositories/user_repository.dart';
 import '../data/repositories/gather_repository.dart';
@@ -10,7 +12,6 @@ import '../theme/app_theme.dart';
 import 'time_preference_screen.dart';
 
 import '../shared_widgets/email_invite_widget.dart';
-import '../shared_widgets/link_invite_widget.dart';
 
 class CreateGathering extends StatefulWidget {
   const CreateGathering({super.key});
@@ -39,15 +40,55 @@ class _CreateGatheringState extends State<CreateGathering> {
 
   final List<String> _activities = [];
   List<String> _selectedEmails = [];
+  List<User> _friends = [];
+  final Set<String> _selectedFriendIds = <String>{};
+  final TextEditingController _friendSearchController = TextEditingController();
+  bool _friendsLoading = false;
+  String? _friendsError;
 
+  // 0 = Friends List, 1 = Email.
   int _selectedInviteMethod = 1;
 
   bool _isCreating = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadFriends();
+  }
+
+  Future<void> _loadFriends() async {
+    final current = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (current == null) {
+      if (mounted) setState(() => _friendsError = 'Please log in first.');
+      return;
+    }
+    setState(() {
+      _friendsLoading = true;
+      _friendsError = null;
+    });
+    try {
+      final loaded = await _userRepository.getFriends(current.uid);
+      if (!mounted) return;
+      setState(() {
+        _friends = loaded.where((u) => u.id != current.uid).toList();
+        _friendsLoading = false;
+      });
+    } catch (error) {
+      debugPrint('Failed to load friends: $error');
+      if (!mounted) return;
+      setState(() {
+        _friendsLoading = false;
+        _friendsError = 'Unable to load friends.';
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _activityController.dispose();
+    _friendSearchController.dispose();
     super.dispose();
   }
 
@@ -145,6 +186,14 @@ class _CreateGatheringState extends State<CreateGathering> {
 
         inviteeIds.add(user.id);
       }
+
+      // Invite selected friends using their Firebase UIDs.
+      // Set prevents duplicate invitations across email and friends.
+      final validFriendIds = _friends.map((f) => f.id).toSet();
+      if (!_selectedFriendIds.every(validFriendIds.contains)) {
+        throw StateError('Selected friends are no longer available.');
+      }
+      inviteeIds.addAll(_selectedFriendIds);
 
       // Save gathering and invitations atomically.
       final gathering =
@@ -254,7 +303,6 @@ class _CreateGatheringState extends State<CreateGathering> {
     const labels = [
       'Friends List',
       'Email',
-      'Link',
     ];
 
     return Container(
@@ -312,40 +360,84 @@ class _CreateGatheringState extends State<CreateGathering> {
     );
   }
 
+  // Friends are filtered locally while typing; no search button needed.
+  Widget _buildFriendsList() {
+    final theme = Theme.of(context);
+    final query = _friendSearchController.text.trim().toLowerCase();
+    final filtered = _friends.where((friend) {
+      return friend.fullName.toLowerCase().contains(query) ||
+          friend.email.toLowerCase().contains(query);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _friendSearchController,
+          onChanged: (_) => setState(() {}),
+          decoration: _inputDecoration('Search friends by name or email')
+              .copyWith(prefixIcon: const Icon(Icons.search)),
+        ),
+        const SizedBox(height: 12),
+        if (_friendsLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (_friendsError != null)
+          Column(
+            children: [
+              Text(_friendsError!, style: TextStyle(color: theme.colorScheme.error)),
+              TextButton(onPressed: _loadFriends, child: const Text('Retry')),
+            ],
+          )
+        else if (filtered.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(_friends.isEmpty ? 'No friends yet.' : 'No matching friends.'),
+          )
+        else
+          for (final friend in filtered)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                child: CheckboxListTile(
+                  value: _selectedFriendIds.contains(friend.id),
+                  title: Text(friend.fullName),
+                  subtitle: Text(friend.email),
+                  secondary: const CircleAvatar(child: Icon(Icons.person_outline)),
+                  controlAffinity: ListTileControlAffinity.trailing,
+                  onChanged: (selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _selectedFriendIds.add(friend.id);
+                      } else {
+                        _selectedFriendIds.remove(friend.id);
+                      }
+                    });
+                  },
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+
   // Display the selected invitation method.
   Widget _buildInviteContent() {
     if (_selectedInviteMethod == 0) {
-      // Friends integration will be added later.
-      return Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 24,
-        ),
-        child: Center(
-          child: Text(
-            'Friends list will be available soon.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ),
-      );
+      return _buildFriendsList();
     }
-
-    if (_selectedInviteMethod == 1) {
-      return EmailInviteWidget(
-        selectedEmails: _selectedEmails,
-        onEmailsChanged: (emails) {
-          setState(() {
-            _selectedEmails = emails;
-          });
-        },
-      );
-    }
-
-    return const LinkInviteWidget();
+    return EmailInviteWidget(
+      selectedEmails: _selectedEmails,
+      onEmailsChanged: (emails) {
+        setState(() => _selectedEmails = emails);
+      },
+    );
   }
 
   // Display selected invitee count.
   Widget _buildSelectedInvitees() {
-    final count = _selectedEmails.length;
+    final count = _selectedEmails.length + _selectedFriendIds.length;
     final theme = Theme.of(context);
 
     return Container(
