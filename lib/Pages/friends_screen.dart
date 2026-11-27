@@ -23,7 +23,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
   // Stores the email entered in the Add Friend dialog.
   final TextEditingController _emailController = TextEditingController();
 
-  // Reads registered users from the local JSON data.
+  // Accesses users and friends through Firebase.
   final FirebaseUserRepository _userRepository = FirebaseUserRepository();
 
   // Release the controller when the screen is removed.
@@ -50,10 +50,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
     }
 
     final loadedUser =
-    await _userRepository.getUserById(firebaseUser.uid);
+      await _userRepository.getUserById(firebaseUser.uid);
 
     final loadedFriends =
-    await _userRepository.getFriends(firebaseUser.uid);
+      await _userRepository.getFriends(firebaseUser.uid);
 
     if (!mounted) return;
 
