@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../data/repositories/user_repository.dart';
 import '../models/user_model.dart';
 import 'help_support_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -192,7 +193,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: const Icon(Icons.contact_support_outlined),
                       title: const Text('Contact us'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () {},
+                      onTap: () async {
+                        final emailUri = Uri(
+                          scheme: 'mailto',
+                          path: 'gather.support@gmail.com',
+                          queryParameters: {
+                            'subject': 'Gather App Support',
+                          },
+                        );
+
+                        await launchUrl(emailUri);
+                      },
                     ),
                   ],
                 ),
