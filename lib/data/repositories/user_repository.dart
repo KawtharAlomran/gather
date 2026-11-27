@@ -27,97 +27,126 @@ abstract class UserRepository {
   Future<void> updateNotificationPreference(
   String userId,
   bool enabled,
-);
-}
+  );
+  Future<List<User>> getFriends(String userId);
 
-// Temporary repository using local JSON data.
-class MockUserRepository implements UserRepository {
-  List<User>? _users;
-
-  // Load users from JSON only once per repository instance.
-  Future<void> _loadUsers() async {
-    if (_users != null) return;
-
-    final jsonString = await rootBundle.loadString(
-      'lib/data/users.json',
-    );
-
-    final List<dynamic> jsonData = jsonDecode(jsonString);
-
-    _users = jsonData
-        .map(
-          (item) => User.fromMap(
-            item as Map<String, dynamic>,
-            (item['id'] as String?) ?? '',
-          ),
-        )
-        .toList();
-  }
-
-  @override
-  Future<List<User>> getUsers() async {
-    await _loadUsers();
-    return List.unmodifiable(_users!);
-  }
-
-  @override
-  Future<User?> getUserById(String userId) async {
-    await _loadUsers();
-
-    for (final user in _users!) {
-      if (user.id == userId) {
-        return user;
-      }
-    }
-
-    return null;
-  }
-
-  // Search local sample users by exact email.
-  @override
-  Future<User?> findUserByEmail(String email) async {
-    await _loadUsers();
-
-    final normalizedEmail = email.trim().toLowerCase();
-
-    for (final user in _users!) {
-      if (user.email.trim().toLowerCase() ==
-          normalizedEmail) {
-        return user;
-      }
-    }
-
-    return null;
-  }
-
-  // Authentication is not supported by the mock repository.
-  @override
-  Future<User?> login(
-    String email,
-    String password,
-  ) async {
-    throw UnsupportedError(
-      'Use FirebaseUserRepository for authentication.',
-    );
-  }
-
-  @override
-  Future<User?> signUp(
-    String firstName,
-    String lastName,
-    String email,
-    String password,
-  ) async {
-    throw UnsupportedError(
-      'Use FirebaseUserRepository for registration.',
-    );
-  }
-  @override
-  Future<void> updateNotificationPreference(
+  Future<void> addFriend(
     String userId,
-    bool enabled,
-  ) async {}
+    String friendId,
+  );
+
+  Future<void> removeFriend(
+    String userId,
+    String friendId,
+  );
 }
+
+// // Temporary repository using local JSON data.
+// class MockUserRepository implements UserRepository {
+//   List<User>? _users;
+
+//   // Load users from JSON only once per repository instance.
+//   Future<void> _loadUsers() async {
+//     if (_users != null) return;
+
+//     final jsonString = await rootBundle.loadString(
+//       'lib/data/users.json',
+//     );
+
+//     final List<dynamic> jsonData = jsonDecode(jsonString);
+
+//     _users = jsonData
+//         .map(
+//           (item) => User.fromMap(
+//             item as Map<String, dynamic>,
+//             (item['id'] as String?) ?? '',
+//           ),
+//         )
+//         .toList();
+//   }
+
+//   @override
+//   Future<List<User>> getUsers() async {
+//     await _loadUsers();
+//     return List.unmodifiable(_users!);
+//   }
+
+//   @override
+//   Future<User?> getUserById(String userId) async {
+//     await _loadUsers();
+
+//     for (final user in _users!) {
+//       if (user.id == userId) {
+//         return user;
+//       }
+//     }
+
+//     return null;
+//   }
+
+//   // Search local sample users by exact email.
+//   @override
+//   Future<User?> findUserByEmail(String email) async {
+//     await _loadUsers();
+
+//     final normalizedEmail = email.trim().toLowerCase();
+
+//     for (final user in _users!) {
+//       if (user.email.trim().toLowerCase() ==
+//           normalizedEmail) {
+//         return user;
+//       }
+//     }
+
+//     return null;
+//   }
+
+//   // Authentication is not supported by the mock repository.
+//   @override
+//   Future<User?> login(
+//     String email,
+//     String password,
+//   ) async {
+//     throw UnsupportedError(
+//       'Use FirebaseUserRepository for authentication.',
+//     );
+//   }
+
+//   @override
+//   Future<User?> signUp(
+//     String firstName,
+//     String lastName,
+//     String email,
+//     String password,
+//   ) async {
+//     throw UnsupportedError(
+//       'Use FirebaseUserRepository for registration.',
+//     );
+//   }
+//   @override
+//   Future<void> updateNotificationPreference(
+//     String userId,
+//     bool enabled,
+//   ) async {}
+
+//   @override
+//   Future<List<User>> getFriends(String userId) async {
+//     return [];
+//   }
+
+//   @override
+//   Future<void> addFriend(
+//     String userId,
+//     String friendId,
+//   ) async {}
+
+//   @override
+//   Future<void> removeFriend(
+//     String userId,
+//     String friendId,
+//   ) async {}
+
+// }
 
 // Firebase implementation of UserRepository.
 class FirebaseUserRepository implements UserRepository {
@@ -282,16 +311,20 @@ class FirebaseUserRepository implements UserRepository {
   // This does not enumerate all registered users because
   // their private profiles are protected by Firestore rules.
   @override
+  @override
   Future<List<User>> getUsers() async {
-    final currentUser = _auth.currentUser;
+    final snapshot = await _firestore
+        .collection('users')
+        .get();
 
-    if (currentUser == null) {
-      throw StateError('User is not authenticated.');
-    }
-
-    final user = await getUserById(currentUser.uid);
-
-    return user == null ? [] : [user];
+    return snapshot.docs
+        .map(
+          (document) => User.fromMap(
+            document.data(),
+            document.id,
+          ),
+        )
+        .toList();
   }
   @override
   Future<void> updateNotificationPreference(
@@ -300,6 +333,57 @@ class FirebaseUserRepository implements UserRepository {
   ) async {
     await _firestore.collection('users').doc(userId).update({
       'notificationsEnabled': enabled,
+    });
+  }
+  @override
+  Future<List<User>> getFriends(String userId) async {
+    final userDocument =
+        await _firestore.collection('users').doc(userId).get();
+
+    final data = userDocument.data();
+
+    if (data == null) return [];
+
+    final friendIds = List<String>.from(
+      data['friendIds'] ?? [],
+    );
+
+    final friends = <User>[];
+
+    for (final friendId in friendIds) {
+      final friendDocument =
+          await _firestore.collection('users').doc(friendId).get();
+
+      if (friendDocument.exists && friendDocument.data() != null) {
+        friends.add(
+          User.fromMap(
+            friendDocument.data()!,
+            friendDocument.id,
+          ),
+        );
+      }
+    }
+
+    return friends;
+  }
+
+  @override
+  Future<void> addFriend(
+    String userId,
+    String friendId,
+  ) async {
+    await _firestore.collection('users').doc(userId).update({
+      'friendIds': FieldValue.arrayUnion([friendId]),
+    });
+  }
+
+  @override
+  Future<void> removeFriend(
+    String userId,
+    String friendId,
+  ) async {
+    await _firestore.collection('users').doc(userId).update({
+      'friendIds': FieldValue.arrayRemove([friendId]),
     });
   }
 }

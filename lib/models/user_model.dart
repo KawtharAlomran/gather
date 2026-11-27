@@ -5,6 +5,7 @@ class User {
   final String email;
   final String? avatar;
   final bool notificationsEnabled;
+  final List<String> friendIds;
 
   const User({
     required this.id,
@@ -13,6 +14,7 @@ class User {
     required this.email,
     this.avatar,
     this.notificationsEnabled = true,
+    this.friendIds = const [],
   });
 
   String get fullName => '$firstName $lastName';
@@ -29,6 +31,9 @@ class User {
       avatar: data['avatar'] as String?,
       notificationsEnabled:
           data['notificationsEnabled'] as bool? ?? true,
+      friendIds: List<String>.from(
+          data['friendIds'] ?? [],
+),
     );
   }
 
@@ -39,6 +44,7 @@ class User {
       'email': email,
       'avatar': avatar,
       'notificationsEnabled': notificationsEnabled,
+      'friendIds': friendIds,
     };
   }
 }

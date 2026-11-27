@@ -7,6 +7,7 @@ import '../shared_widgets/app_message.dart';
 import '../data/repositories/user_repository.dart';
 import '../models/user_model.dart';
 import '../shared_widgets/app_search_field.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -16,23 +17,51 @@ class FriendsScreen extends StatefulWidget {
 }
 
 class _FriendsScreenState extends State<FriendsScreen> {
-  // Temporary local list of friends for the Phase 3 prototype.
-  final List<Map<String, String>> friends = [
-    {'name': 'Naba Al Antaif', 'email': 'naba@example.com'},
-    {'name': 'Sarah Ahmed', 'email': 'sarah@example.com'},
-    {'name': 'Manar Ali', 'email': 'manar@example.com'},
-  ];
+  List<User> friends = [];
+  bool isLoading = true;
+  User? currentUser;
   // Stores the email entered in the Add Friend dialog.
   final TextEditingController _emailController = TextEditingController();
 
   // Reads registered users from the local JSON data.
-  final UserRepository _userRepository = MockUserRepository();
+  final FirebaseUserRepository _userRepository = FirebaseUserRepository();
 
   // Release the controller when the screen is removed.
   @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
+  }
+  @override
+  void initState() {
+    super.initState();
+    _loadFriends();
+  }
+
+  Future<void> _loadFriends() async {
+    final firebaseUser =
+        firebase_auth.FirebaseAuth.instance.currentUser;
+
+    if (firebaseUser == null) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
+    final loadedUser =
+    await _userRepository.getUserById(firebaseUser.uid);
+
+    final loadedFriends =
+    await _userRepository.getFriends(firebaseUser.uid);
+
+    if (!mounted) return;
+
+    setState(() {
+      currentUser = loadedUser;
+      friends = loadedFriends;
+      isLoading = false;
+    });
   }
 
   // Open a dialog for searching for a friend by email.
@@ -79,11 +108,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
     );
   }
 
-  // Search the local user data and add the matching user to the friends list.
-  Future<void> _searchAndAddFriend(BuildContext dialogContext) async {
-    // Remove extra spaces and ignore letter casing.
-    final enteredEmail = _emailController.text.trim().toLowerCase();
-    // Reject empty input and show an error message.
+  // Search and add the matching user to the friends list.
+  Future<void> _searchAndAddFriend(
+    BuildContext dialogContext,
+  ) async {
+    final enteredEmail =
+        _emailController.text.trim().toLowerCase();
+
     if (enteredEmail.isEmpty) {
       Navigator.pop(dialogContext);
 
@@ -94,11 +125,16 @@ class _FriendsScreenState extends State<FriendsScreen> {
       );
       return;
     }
-    // Load all registered users from users.json through the repository.
+
+    final firebaseUser =
+        firebase_auth.FirebaseAuth.instance.currentUser;
+
+    if (firebaseUser == null) return;
+
     final users = await _userRepository.getUsers();
-    // Store the user whose email matches the entered email.
+
     User? foundUser;
-    // Check each registered user until a matching email is found.
+
     for (final user in users) {
       if (user.email.toLowerCase() == enteredEmail) {
         foundUser = user;
@@ -107,10 +143,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
     }
 
     if (!mounted) return;
-    // Close the search dialog after the user search completes.
-    Navigator.pop(dialogContext);
 
     if (foundUser == null) {
+      Navigator.pop(dialogContext);
+
       AppMessage.show(
         context,
         message: 'This user is not registered.',
@@ -118,12 +154,25 @@ class _FriendsScreenState extends State<FriendsScreen> {
       );
       return;
     }
-    // Prevent adding a user who is already in the friends list.
+
+    if (foundUser.id == firebaseUser.uid) {
+      Navigator.pop(dialogContext);
+
+      AppMessage.show(
+        context,
+        message: 'You cannot add yourself.',
+        type: MessageType.error,
+      );
+      return;
+    }
+
     final alreadyFriend = friends.any(
-      (friend) => friend['email']!.toLowerCase() == enteredEmail,
+      (friend) => friend.id == foundUser!.id,
     );
 
     if (alreadyFriend) {
+      Navigator.pop(dialogContext);
+
       AppMessage.show(
         context,
         message: 'This user is already your friend.',
@@ -131,17 +180,27 @@ class _FriendsScreenState extends State<FriendsScreen> {
       );
       return;
     }
-    // Update the UI by adding the new friend to the local list.
+
+    await _userRepository.addFriend(
+      firebaseUser.uid,
+      foundUser.id,
+    );
+
+    if (!mounted) return;
+
+    Navigator.pop(dialogContext);
+
     setState(() {
-      friends.add({'name': foundUser!.fullName, 'email': foundUser.email});
+      friends.add(foundUser!);
     });
-    // Inform the user that the friend was added successfully.
+
     AppMessage.show(
       context,
       message: 'Friend added successfully.',
       type: MessageType.success,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +215,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
           const SizedBox(height: 20),
 
           Text(
-            'Nour Al Sulais',
+            currentUser?.fullName ?? 'User',
             style: Theme.of(context).textTheme.headlineLarge,
           ),
 
@@ -173,62 +232,77 @@ class _FriendsScreenState extends State<FriendsScreen> {
           const SizedBox(height: 24),
           // Build one friend card for each friend in the list.
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: friends.length,
-              itemBuilder: (context, index) {
-                final friend = friends[index];
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : friends.isEmpty
+                    ? const Center(
+                        child: Text('No friends yet'),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: friends.length,
+                        itemBuilder: (context, index) {
+                          final friend = friends[index];
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: AppCard(
-                    child: ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person)),
-                      title: Text(
-                        friend['name']!,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      subtitle: Text(
-                        friend['email']!,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        // Ask for confirmation before deleting the friend.
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (dialogContext) {
-                              return AppDialog(
-                                title: 'Delete Friend',
-                                message:
-                                    'Are you sure you want to delete ${friend['name']} from your friends list?',
-                                cancelText: 'Cancel',
-                                confirmText: 'Delete',
-                                // Remove the selected friend and refresh the list.
-                                onConfirm: () {
-                                  setState(() {
-                                    friends.removeAt(index);
-                                  });
-                                  Navigator.pop(dialogContext);
-                                  // Confirm the deletion to the user.
-                                  AppMessage.show(
-                                    context,
-                                    message: 'Friend deleted successfully.',
-                                    type: MessageType.success,
-                                  );
-                                },
-                              );
-                            },
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: AppCard(
+                              child: ListTile(
+                                leading: const CircleAvatar(
+                                  child: Icon(Icons.person),
+                                ),
+                                title: Text(friend.fullName),
+                                subtitle: Text(friend.email),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (dialogContext) {
+                                        return AppDialog(
+                                          title: 'Delete Friend',
+                                          message:
+                                              'Are you sure you want to delete ${friend.fullName} from your friends list?',
+                                          cancelText: 'Cancel',
+                                          confirmText: 'Delete',
+                                          onConfirm: () async {
+                                            final firebaseUser =
+                                                firebase_auth.FirebaseAuth.instance.currentUser;
+
+                                            if (firebaseUser == null) return;
+
+                                            await _userRepository.removeFriend(
+                                              firebaseUser.uid,
+                                              friend.id,
+                                            );
+
+                                            if (!mounted) return;
+
+                                            setState(() {
+                                              friends.removeAt(index);
+                                            });
+
+                                            Navigator.pop(dialogContext);
+
+                                            AppMessage.show(
+                                              context,
+                                              message: 'Friend deleted successfully.',
+                                              type: MessageType.success,
+                                            );
+                                          },
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
                           );
                         },
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+          )
         ],
       ),
     );
