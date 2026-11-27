@@ -24,6 +24,10 @@ abstract class UserRepository {
     String email,
     String password,
   );
+  Future<void> updateNotificationPreference(
+  String userId,
+  bool enabled,
+);
 }
 
 // Temporary repository using local JSON data.
@@ -108,6 +112,11 @@ class MockUserRepository implements UserRepository {
       'Use FirebaseUserRepository for registration.',
     );
   }
+  @override
+  Future<void> updateNotificationPreference(
+    String userId,
+    bool enabled,
+  ) async {}
 }
 
 // Firebase implementation of UserRepository.
@@ -283,6 +292,15 @@ class FirebaseUserRepository implements UserRepository {
     final user = await getUserById(currentUser.uid);
 
     return user == null ? [] : [user];
+  }
+  @override
+  Future<void> updateNotificationPreference(
+    String userId,
+    bool enabled,
+  ) async {
+    await _firestore.collection('users').doc(userId).update({
+      'notificationsEnabled': enabled,
+    });
   }
 }
 

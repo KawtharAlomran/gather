@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gather/Pages/friends_screen.dart';
-import 'package:gather/Pages/language_screen.dart';
 import 'package:gather/Pages/login_screen.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_card.dart';
@@ -50,6 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() {
       currentUser = loadedUser;
+      notificationsEnabled = loadedUser?.notificationsEnabled ?? true;
       isLoading = false;
     });
   }
@@ -120,27 +120,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       trailing: Switch(
                         value: notificationsEnabled,
                         // Update the notification setting and refresh the UI.
-                        onChanged: (value) {
+                        onChanged: (value) async {
                           setState(() {
                             notificationsEnabled = value;
                           });
+
+                          final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+
+                          if (firebaseUser == null) return;
+
+                          await FirebaseUserRepository().updateNotificationPreference(
+                            firebaseUser.uid,
+                            value,
+                          );
                         },
                       ),
-                    ),
-
-                    ListTile(
-                      leading: const Icon(Icons.language),
-                      title: const Text('Language'),
-                      trailing: const Icon(Icons.chevron_right),
-                      // Open the language settings screen.
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LanguageScreen(),
-                          ),
-                        );
-                      },
                     ),
                   ],
                 ),

@@ -4,6 +4,7 @@ class User {
   final String lastName;
   final String email;
   final String? avatar;
+  final bool notificationsEnabled;
 
   const User({
     required this.id,
@@ -11,6 +12,7 @@ class User {
     required this.lastName,
     required this.email,
     this.avatar,
+    this.notificationsEnabled = true,
   });
 
   String get fullName => '$firstName $lastName';
@@ -25,6 +27,8 @@ class User {
       lastName: data['lastName'] as String? ?? '',
       email: data['email'] as String? ?? '',
       avatar: data['avatar'] as String?,
+      notificationsEnabled:
+          data['notificationsEnabled'] as bool? ?? true,
     );
   }
 
@@ -34,6 +38,7 @@ class User {
       'lastName': lastName,
       'email': email,
       'avatar': avatar,
+      'notificationsEnabled': notificationsEnabled,
     };
   }
 }
