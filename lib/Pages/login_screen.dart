@@ -75,6 +75,67 @@ class _LoginPageState extends State<LoginPage> {
       MaterialPageRoute(builder: (_) => const BottomNavigation()),
     );
   }
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController();
+
+    final email = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Forgot Password?'),
+          content: TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              hintText: 'Enter your email address',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(
+                  dialogContext,
+                  emailController.text,
+                );
+              },
+              child: const Text('Send'),
+            ),
+          ],
+        );
+      },
+    );
+
+    emailController.dispose();
+
+    if (email == null || email.trim().isEmpty) return;
+
+    try {
+      await _userRepository.sendPasswordResetEmail(email);
+
+      if (!mounted) return;
+
+      AppMessage.show(
+        context,
+        message: 'Password reset link sent to your email.',
+        type: MessageType.success,
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      AppMessage.show(
+        context,
+        message: 'Could not send password reset email.',
+        type: MessageType.error,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +206,7 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: _showForgotPasswordDialog,
                     child: const Text('Forgot password?'),
                   ),
                 ),

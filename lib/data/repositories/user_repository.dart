@@ -39,6 +39,7 @@ abstract class UserRepository {
     String userId,
     String friendId,
   );
+  Future<void> sendPasswordResetEmail(String email);
 }
 
 // // Temporary repository using local JSON data.
@@ -385,6 +386,12 @@ class FirebaseUserRepository implements UserRepository {
     await _firestore.collection('users').doc(userId).update({
       'friendIds': FieldValue.arrayRemove([friendId]),
     });
+  }
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _auth.sendPasswordResetEmail(
+      email: email.trim(),
+    );
   }
 }
 
