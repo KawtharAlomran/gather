@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/vote_model.dart';
 import '../data/repositories/vote_repository.dart';
+import '../data/repositories/preference_repository.dart';
 
 import '../models/gathering_model.dart';
 import '../shared_widgets/app_button.dart';
@@ -43,6 +44,7 @@ class CreatorGatheringPage extends StatefulWidget {
 class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
   final _voteRepository = VoteRepository();
   late Stream<List<Vote>> _votes;
+  late Future<List<DateOptionModel>> _dateOptions;
   bool _savingVote = false;
 
   @override
@@ -52,6 +54,7 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
   }
 
   void _subscribeVotes() {
+    _dateOptions = loadDateOptions(widget.gathering);
     _votes = _voteRepository.watchVotes(widget.gathering.id, targetType: 'datetime');
   }
 
@@ -153,7 +156,14 @@ Future<void> _endVoting() async {
                   ),
                   const SizedBox(height: 16),
                   AppCard(
-                    child: StreamBuilder<List<Vote>>(
+                    child: FutureBuilder<List<DateOptionModel>>(
+                      future: _dateOptions,
+                      builder: (context, dates) {
+                        if (dates.hasError) return Text('Could not load date preferences: ${dates.error}');
+                        if (!dates.hasData) return const Center(child: CircularProgressIndicator());
+                        final options = dates.data!;
+                        if (options.isEmpty) return const Text('No date preferences available yet.');
+                        return StreamBuilder<List<Vote>>(
                       stream: _votes,
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
@@ -165,9 +175,9 @@ Future<void> _endVoting() async {
                         final uid = FirebaseAuth.instance.currentUser?.uid;
                         final counts = <String, int>{};
                         String? selected;
-                        final optionIds = gathering.dateOptions.map((o) => o.id).toSet();
+                        final optionIds = options.map((o) => o.id).toSet();
                         for (final vote in snapshot.data!) {
-                          if (!optionIds.contains(vote.targetId)) continue;
+                          if (!optionIds.contains(vote.targetId) || !gathering.participantIds.contains(vote.userId)) continue;
                           counts.update(vote.targetId, (n) => n + 1, ifAbsent: () => 1);
                           if (vote.userId == uid) selected = vote.targetId;
                         }
@@ -178,7 +188,7 @@ Future<void> _endVoting() async {
                             const Expanded(child: Text('Vote: Best Date')),
                             Text('Votes cast: $total'),
                           ]),
-                          for (final option in gathering.dateOptions)
+                          for (final option in options)
                             RadioListTile<String>(
                               value: option.id,
                               groupValue: selected,
@@ -191,9 +201,9 @@ Future<void> _endVoting() async {
                               child: const Text('Remove my vote')),
                           AppButton(
                             text: 'End Voting',
-                            onPressed: gathering.votingEnded || gathering.dateOptions.isEmpty || _savingVote
+                            onPressed: gathering.votingEnded || options.isEmpty || _savingVote
                                 ? null : () {
-                                  for (final option in gathering.dateOptions) {
+                                  for (final option in options) {
                                     option.votes = counts[option.id] ?? 0;
                                   }
                                   gathering.selectedOptionId = selected;
@@ -201,6 +211,8 @@ Future<void> _endVoting() async {
                                 },
                           ),
                         ]);
+                      },
+                    );
                       },
                     ),
                   ),

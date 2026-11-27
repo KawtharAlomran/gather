@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/gathering_model.dart';
+import 'preference_repository.dart';
 
 // Defines the operations for managing gatherings.
 abstract class GatheringRepository {
@@ -246,7 +247,7 @@ class FirestoreGatheringRepository implements GatheringRepository {
       }
 
       transaction.set(documentRef, {
-        ...gathering.toJson(),
+        ...gathering.toFirestore(),
         'creatorId': user.uid,
         'participantIds': [user.uid],
         'status': 'planning',
@@ -282,8 +283,8 @@ class FirestoreGatheringRepository implements GatheringRepository {
 
       transaction.update(documentRef, {
         'title': gathering.title,
-        'startDate': gathering.startDate?.toIso8601String(),
-        'endDate': gathering.endDate?.toIso8601String(),
+        'startDate': formatGatheringDate(gathering.startDate),
+        'endDate': formatGatheringDate(gathering.endDate),
         'minBudget': gathering.minBudget,
         'maxBudget': gathering.maxBudget,
         'activities': gathering.activities,
@@ -360,21 +361,14 @@ class FirestoreGatheringRepository implements GatheringRepository {
     batch.set(gatheringRef, {
       'title': gatheringTitle,
       'creatorId': organizerId,
-      'creatorEmail': currentUser.email ?? '',
-      'createdBy': currentUser.displayName ?? '',
       'participantIds': [organizerId],
-      'attendingCount': 1,
       'status': 'planning',
-      'planningProgress': 0,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
+      'startDate': formatGatheringDate(startDate),
+      'endDate': formatGatheringDate(endDate),
       'minBudget': minBudget,
       'maxBudget': maxBudget,
       'activities': List<String>.from(activities),
-      'dateTime': null,
-      'dateOptions': [],
       'votingEnded': false,
-      'createdAt': FieldValue.serverTimestamp(),
     });
 
     // Create a pending invitation for each recipient.
@@ -433,28 +427,65 @@ Future<void> leaveGathering(String gatheringId) async {
       });
 }
 
-// Load gatherings belonging to the current Firebase user.
+// Load gathering details and derive vote counts from the votes collection.
 Future<List<GatheringModel>> loadGatherings() async {
   final user = FirebaseAuth.instance.currentUser;
+  if (user == null) throw StateError('Sign in to Gather to see your gatherings.');
+  final snapshot = await FirebaseFirestore.instance.collection('gatherings')
+      .where('participantIds', arrayContains: user.uid).get();
+  return Future.wait(snapshot.docs.map((doc) => _hydrateGathering(doc, user.uid)));
+}
 
-  if (user == null) {
-    throw StateError(
-      'Sign in to Gather to see your gatherings.',
-    );
+Future<GatheringModel> _hydrateGathering(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc, String uid) async {
+  final data = doc.data();
+  final creatorId = data['creatorId'];
+  if (creatorId is String && creatorId.isNotEmpty) {
+    try {
+      final profile = await FirebaseFirestore.instance.collection('user_directory').doc(creatorId).get();
+      final name = profile.data()?['displayName'];
+      if (name is String && name.trim().isNotEmpty) data['createdBy'] = name;
+    } on FirebaseException {
+      // A private or missing directory profile must not block Home.
+    }
   }
+  data['createdBy'] ??= creatorId == uid ? 'You' : 'Name unavailable';
+  final base = GatheringModel.fromJson({...data, 'id': doc.id});
+  final options = await loadDateOptions(base);
+  final gathering = GatheringModel.fromJson({...data, 'id': doc.id,
+    'dateOptions': options.map((o) => {...o.toJson(), 'label': o.label}).toList(),
+  });
+  final votes = await FirebaseFirestore.instance.collection('votes')
+      .where('gatheringId', isEqualTo: doc.id)
+      .where('targetType', isEqualTo: 'datetime').get();
+  applyDateVotes(gathering, votes.docs.map((doc) => doc.data()), uid);
+  return gathering;
+}
 
-  final snapshot = await FirebaseFirestore.instance
-      .collection('gatherings')
-      .where(
-        'participantIds',
-        arrayContains: user.uid,
-      )
-      .get();
+// Count current participants who submitted a date vote, once per person.
+void applyDateVotes(GatheringModel gathering, Iterable<Map<String, dynamic>> votes, String uid) {
+  final members = gathering.participantIds.toSet();
+  final byUser = <String, String>{};
+  for (final vote in votes) {
+    final voter = vote['userId'];
+    final target = vote['targetId'];
+    if (voter is String && target is String && members.contains(voter) && target.isNotEmpty) {
+      byUser[voter] = target;
+    }
+  }
+  for (final option in gathering.dateOptions) {
+    option.votes = byUser.values.where((target) => target == option.id).length;
+  }
+  gathering.selectedOptionId = byUser[uid];
+  gathering.setDateVoterCount(byUser.length);
+}
 
-  return snapshot.docs.map((document) {
-    return GatheringModel.fromJson({
-      ...document.data(),
-      'id': document.id,
-    });
-  }).toList();
+Stream<int> watchPlanningProgress(GatheringModel gathering) {
+  final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  return FirebaseFirestore.instance.collection('votes')
+      .where('gatheringId', isEqualTo: gathering.id)
+      .where('targetType', isEqualTo: 'datetime').snapshots().map((snapshot) {
+    applyDateVotes(gathering, snapshot.docs.map((doc) => doc.data()), uid);
+    return gathering.planningProgress;
+  });
 }

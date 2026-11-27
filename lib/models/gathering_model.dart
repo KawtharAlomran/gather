@@ -69,6 +69,17 @@ class Gathering {
     'activities': activities,
   };
 
+  // Persist only gathering creation fields; document ID is external.
+  Map<String, dynamic> toFirestore() => {
+    'title': title,
+    'participantIds': participantIds,
+    'startDate': formatGatheringDate(startDate),
+    'endDate': formatGatheringDate(endDate),
+    'minBudget': minBudget,
+    'maxBudget': maxBudget,
+    'activities': activities,
+  };
+
   // Create an updated copy without modifying the original.
   Gathering copyWith({
     String? id,
@@ -105,7 +116,17 @@ class GatheringModel {
   final int attendingCount;
   final String? place;
   final String status;
-  final int planningProgress;
+  final List<String> participantIds;
+  final int _initialPlanningProgress;
+  int? _voterCount;
+
+  int get planningProgress => _voterCount == null
+      ? _initialPlanningProgress
+      : attendingCount == 0 ? 0 : (_voterCount! * 100 / attendingCount).round();
+
+  void setDateVoterCount(int count) {
+    _voterCount = count.clamp(0, attendingCount).toInt();
+  }
   final List<String> attendeeNames;
   final DateTime? dateTime;
   final List<DateOptionModel> dateOptions;
@@ -127,7 +148,8 @@ class GatheringModel {
     this.attendingCount = 0,
     this.place,
     this.status = 'planning',
-    this.planningProgress = 0,
+    int planningProgress = 0,
+    this.participantIds = const [],
     this.attendeeNames = const [],
     this.dateTime,
     this.dateOptions = const [],
@@ -140,7 +162,7 @@ class GatheringModel {
     this.minBudget,
     this.maxBudget,
     this.activities = const [],
-  });
+  }) : _initialPlanningProgress = planningProgress;
 
   // Calculate total votes across all date options.
   int get totalVotes =>
@@ -168,10 +190,9 @@ class GatheringModel {
           ?? 0,
       place: json['place'] as String?,
       status:
-          json['status'] as String? ??
           (json['dateTime'] != null ? 'confirmed' : 'planning'),
-      planningProgress:
-          (json['planningProgress'] as num?)?.toInt() ?? 0,
+      participantIds: gatheringParticipantIds(json) ?? const [],
+      planningProgress: 0,
       attendeeNames: (json['attendeeNames'] as List? ?? [])
           .map((name) => name.toString())
           .toList(),
@@ -222,6 +243,21 @@ class GatheringModel {
     'maxBudget': maxBudget,
     'activities': activities,
   };
+  // UI-only values are deliberately excluded from Firestore.
+  Map<String, dynamic> toFirestore() => {
+    'title': title,
+    'creatorId': creatorId,
+    'participantIds': participantIds,
+    'startDate': formatGatheringDate(startDate),
+    'endDate': formatGatheringDate(endDate),
+    'minBudget': minBudget,
+    'maxBudget': maxBudget,
+    'activities': activities,
+    'votingEnded': votingEnded,
+    if (dateTime != null) 'dateTime': dateTime!.toUtc().toIso8601String(),
+    if (place != null) 'place': place,
+  };
+
 }
 
 // DateOptionModel - Date voting options
@@ -245,7 +281,7 @@ class DateOptionModel {
     return DateOptionModel(
       id: json['id'] as String,
       label: json['label'] as String? ??
-          '${date.day}/${date.month}/${date.year}',
+          '${date.toLocal().day}/${date.toLocal().month}/${date.toLocal().year}',
       dateTime: date,
       votes: (json['votes'] as num?)?.toInt() ?? 0,
     );
@@ -254,7 +290,6 @@ class DateOptionModel {
   // Convert a DateOptionModel object into JSON.
   Map<String, dynamic> toJson() => {
     'id': id,
-    'label': label,
     'dateTime': dateTime.toUtc().toIso8601String(),
   };
 }
@@ -270,3 +305,9 @@ List<String>? gatheringParticipantIds(Map<String, dynamic> data) {
       .toList();
 }
 
+
+// Calendar dates have no time component in Firestore.
+String? formatGatheringDate(DateTime? date) {
+  if (date == null) return null;
+  return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}

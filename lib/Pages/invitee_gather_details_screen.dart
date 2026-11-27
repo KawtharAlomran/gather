@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/vote_model.dart';
 import '../data/repositories/vote_repository.dart';
+import '../data/repositories/preference_repository.dart';
 
 import '../models/gathering_model.dart';
 import '../shared_widgets/app_card.dart';
@@ -37,6 +38,7 @@ class InviteeGatheringPage extends StatefulWidget {
 class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
   final _repository = VoteRepository();
   late Stream<List<Vote>> _votes;
+  late Future<List<DateOptionModel>> _dateOptions;
   String? _selectedOptionId;
   bool _hasDraft = false;
   bool _saving = false;
@@ -44,6 +46,7 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
   @override
   void initState() {
     super.initState();
+    _dateOptions = loadDateOptions(widget.gathering);
     _votes = _repository.watchVotes(widget.gathering.id, targetType: 'datetime');
   }
 
@@ -75,7 +78,14 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
   }
 
   Widget _buildVoting(GatheringModel gathering) {
-    return StreamBuilder<List<Vote>>(
+    return FutureBuilder<List<DateOptionModel>>(
+      future: _dateOptions,
+      builder: (context, dates) {
+        if (dates.hasError) return Text('Could not load date preferences: ${dates.error}');
+        if (!dates.hasData) return const Center(child: CircularProgressIndicator());
+        final available = dates.data!;
+        if (available.isEmpty) return const Text('No date preferences available yet.');
+        return StreamBuilder<List<Vote>>(
       stream: _votes,
       builder: (context, snapshot) {
         if (snapshot.hasError) return Text('Could not load votes: ${snapshot.error}');
@@ -83,13 +93,13 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
         final uid = FirebaseAuth.instance.currentUser?.uid;
         final counts = <String, int>{};
         String? savedOption;
-        final validIds = gathering.dateOptions.map((o) => o.id).toSet();
+        final validIds = available.map((o) => o.id).toSet();
         for (final vote in snapshot.data!) {
-          if (!validIds.contains(vote.targetId)) continue;
+          if (!validIds.contains(vote.targetId) || !gathering.participantIds.contains(vote.userId)) continue;
           counts.update(vote.targetId, (n) => n + 1, ifAbsent: () => 1);
           if (vote.userId == uid) savedOption = vote.targetId;
         }
-        final options = gathering.dateOptions.map((o) => DateOptionModel(
+        final options = available.map((o) => DateOptionModel(
           id: o.id, label: o.label, dateTime: o.dateTime, votes: counts[o.id] ?? 0,
         )).toList();
         final selected = _hasDraft ? _selectedOptionId : savedOption;
@@ -108,6 +118,8 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
             TextButton(onPressed: enabled ? () => _saveVote(null) : null,
               child: const Text('Remove my vote')),
         ]);
+      },
+    );
       },
     );
   }
@@ -157,7 +169,7 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (isPlanning && gathering.dateOptions.isNotEmpty)
+                if (isPlanning)
                   _buildVoting(gathering)
                 else
                   AppCard(

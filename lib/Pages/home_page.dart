@@ -27,6 +27,38 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _search = '';
   String? _streamUserId;
+  final Map<String, List<String>> _participantIds = {};
+  final Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> _voteStreams = {};
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _votesFor(String gatheringId) {
+    return _voteStreams.putIfAbsent(
+      gatheringId,
+      () => FirebaseFirestore.instance
+          .collection('votes')
+          .where('gatheringId', isEqualTo: gatheringId)
+          .where('targetType', isEqualTo: 'datetime')
+          .snapshots(),
+    );
+  }
+
+  int _planningProgress(
+    GatheringModel gathering,
+    QuerySnapshot<Map<String, dynamic>> votes,
+  ) {
+    final participants = (_participantIds[gathering.id] ?? []).toSet();
+    if (participants.isEmpty) return 0;
+    final options = gathering.dateOptions.map((option) => option.id).toSet();
+    final voters = <String>{};
+    for (final doc in votes.docs) {
+      final data = doc.data();
+      final uid = data['userId'];
+      if (uid is String && participants.contains(uid) &&
+          options.contains(data['targetId'])) {
+        voters.add(uid);
+      }
+    }
+    return (100 * voters.length / participants.length).round();
+  }
   Stream<List<GatheringModel>>? _gatheringsStream;
 
   String? get currentUserId =>
@@ -37,6 +69,8 @@ class _HomePageState extends State<HomePage> {
   Stream<List<GatheringModel>> _streamForUser(String userId) {
     if (_gatheringsStream == null || _streamUserId != userId) {
       _streamUserId = userId;
+      _participantIds.clear();
+      _voteStreams.clear();
       _gatheringsStream = _watchGatherings(userId);
     }
     return _gatheringsStream!;
@@ -51,7 +85,12 @@ class _HomePageState extends State<HomePage> {
         )
         .snapshots()
         .map((snapshot) {
+          final ids = snapshot.docs.map((doc) => doc.id).toSet();
+          _participantIds.removeWhere((id, _) => !ids.contains(id));
+          _voteStreams.removeWhere((id, _) => !ids.contains(id));
           return snapshot.docs.map((document) {
+            _participantIds[document.id] =
+                gatheringParticipantIds(document.data()) ?? [];
             try {
               return GatheringModel.fromJson({
                 ...document.data(),
@@ -376,18 +415,28 @@ class _HomePageState extends State<HomePage> {
                                           .titleMedium,
                                     ),
 
-                                    Text(
-                                      'Planning continues · '
-                                      '${gathering.planningProgress}%',
-                                    ),
-
-                                    const SizedBox(height: 5),
-
-                                    LinearProgressIndicator(
-                                      value: gathering
-                                              .planningProgress
-                                              .clamp(0, 100) /
-                                          100,
+                                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                                      key: ValueKey(gathering.id),
+                                      stream: _votesFor(gathering.id),
+                                      builder: (context, votes) {
+                                        if (votes.hasError) {
+                                          return const Text('Unable to load voting progress');
+                                        }
+                                        if (!votes.hasData) {
+                                          return const LinearProgressIndicator();
+                                        }
+                                        final progress = _planningProgress(
+                                          gathering, votes.data!,
+                                        );
+                                        return Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Planning continues · $progress%'),
+                                            const SizedBox(height: 5),
+                                            LinearProgressIndicator(value: progress / 100),
+                                          ],
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),

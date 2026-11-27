@@ -12,41 +12,75 @@ Stream<List<AttendeeModel>> watchAttendees(
       .collection('gatherings')
       .doc(gatheringId)
       .snapshots()
-      .map((snapshot) {
+      .asyncMap((snapshot) async {
     final data = snapshot.data();
-    if (data == null) throw StateError('Gathering does not exist.');
+
+    if (data == null) {
+      throw StateError('Gathering does not exist.');
+    }
 
     final ids = gatheringParticipantIds(data);
+
+    // Support older gathering documents.
     if (ids == null) {
-      final storedNames = (data['attendeeNames'] as List? ?? const [])
+      final storedNames = (data['attendeeNames'] as List? ?? [])
           .whereType<String>()
           .where((name) => name.trim().isNotEmpty)
           .toList();
-      final names = storedNames.isEmpty ? fallbackNames : storedNames;
+
+      final names =
+          storedNames.isEmpty ? fallbackNames : storedNames;
+
       return [
         for (final entry in names.asMap().entries)
-          AttendeeModel(id: 'legacy-${entry.key}', name: entry.value, gatheringId: gatheringId),
+          AttendeeModel(
+            id: 'legacy-${entry.key}',
+            name: entry.value,
+            gatheringId: gatheringId,
+          ),
       ];
     }
 
-    final namesById = data['participantNamesById'] as Map? ?? const {};
     final user = FirebaseAuth.instance.currentUser;
-    return [
-      for (final uid in ids)
-        AttendeeModel(
+
+    // Retrieve each participant's name from Firebase.
+    return Future.wait(
+      ids.map((uid) async {
+        String? name;
+
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('user_directory')
+              .doc(uid)
+              .get();
+
+          name = _nonEmptyName(
+            userDoc.data()?['displayName'],
+          );
+        } on FirebaseException catch (e) {
+          // Keep the attendance list available if a name
+          // cannot be retrieved.
+          print('Cannot load attendee $uid: ${e.code}');
+        }
+
+        return AttendeeModel(
           id: uid,
           gatheringId: gatheringId,
-          name: _nonEmptyName(namesById[uid])
-              ?? (uid == data['creatorId'] ? _nonEmptyName(data['createdBy']) : null)
-              ?? (uid == user?.uid ? (_nonEmptyName(user?.displayName) ?? 'You') : 'Name unavailable'),
-        ),
-    ];
+          name: name ??
+              (uid == user?.uid
+                  ? (_nonEmptyName(user?.displayName) ?? 'You')
+                  : 'Name unavailable'),
+        );
+      }),
+    );
   });
 }
 
 String? _nonEmptyName(Object? value) =>
-    value is String && value.trim().isNotEmpty ? value.trim() : null;
+    value is String && value.trim().isNotEmpty
+        ? value.trim()
+        : null;
 
-// One-time read for screens that already call the older repository interface.
+// One-time read for screens using the older interface.
 Future<List<AttendeeModel>> loadAttendees(String gatheringId) =>
     watchAttendees(gatheringId).first;
