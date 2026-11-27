@@ -2,7 +2,10 @@
 // Allows invitees to select their preferred date,
 // view attendance, and leave the gathering.
 
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../shared_widgets/app_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/vote_model.dart';
 import '../data/repositories/vote_repository.dart';
@@ -42,12 +45,29 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
   String? _selectedOptionId;
   bool _hasDraft = false;
   bool _saving = false;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _gatheringSubscription;
 
   @override
   void initState() {
     super.initState();
     _dateOptions = loadDateOptions(widget.gathering);
     _votes = _repository.watchVotes(widget.gathering.id, targetType: 'datetime');
+    _gatheringSubscription = FirebaseFirestore.instance
+        .collection('gatherings').doc(widget.gathering.id).snapshots()
+        .listen((snapshot) {
+      if (!mounted || !snapshot.exists) return;
+      setState(() {
+        widget.gathering.votingEnded = snapshot.data()?['votingEnded'] == true;
+      });
+    }, onError: (Object error) {
+      debugPrint('Could not watch voting status: $error');
+    });
+  }
+
+  @override
+  void dispose() {
+    _gatheringSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _saveVote(String? id) async {
@@ -161,7 +181,9 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
                 const SizedBox(height: 18),
                 GatheringAttendanceCard(
                   count: gathering.attendingCount,
-                  subtitle: isPlanning ? 'Planning continues' : 'View attendees',
+                  subtitle: isPlanning
+                      ? (gathering.votingEnded ? 'Date voting ended' : 'Planning continues')
+                      : 'View attendees',
                   onTap: widget.onViewAttendance ?? () => openAttendance(
                     context,
                     widget.attendeeNames.isNotEmpty ? widget.attendeeNames : gathering.attendeeNames,
@@ -185,6 +207,10 @@ class _InviteeGatheringPageState extends State<InviteeGatheringPage> {
                       ],
                     ),
                   ),
+                if (isPlanning && gathering.votingEnded) ...[
+                  const SizedBox(height: 22),
+                  AppButton(text: 'Place voting', onPressed: widget.onPlaceVoting),
+                ],
               ],
             ),
           ),

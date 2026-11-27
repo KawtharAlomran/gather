@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:gather/models/place_model.dart';
@@ -9,14 +10,13 @@ import '../data/repositories/openstreetmap_repository.dart';
 import '../data/repositories/vote_repository.dart';
 import '../data/repositories/preference_repository.dart';
 import '../data/services/location_service.dart';
-import 'package:gather/models/gathering_model.dart';
 
 
 class PlaceVotingScreen extends StatefulWidget {
-  final Gathering gathering;
+  final String gatheringId;
   const PlaceVotingScreen({
     super.key,
-    required this.gathering,
+    required this.gatheringId,
   });
 
   @override
@@ -44,11 +44,7 @@ class _PlaceVotingScreenState
   String? get userId =>
       FirebaseAuth.instance.currentUser?.uid;
 
-  String get gatheringId =>
-      widget.gathering.id;
-
-  List<String> get participantIds =>
-      widget.gathering.participantIds;
+  String get gatheringId => widget.gatheringId;
 
   @override
   void initState() {
@@ -59,6 +55,20 @@ class _PlaceVotingScreenState
 
   Future<void> loadPlaces() async {
     try {
+      final document = await FirebaseFirestore.instance
+          .collection('gatherings')
+          .doc(gatheringId)
+          .get();
+
+      final data = document.data();
+      if (data == null) {
+        throw StateError('Gathering does not exist.');
+      }
+
+      final participantIds = List<String>.from(
+        data['participantIds'] ?? [],
+      );
+
       final locations = await preferenceRepository
           .getParticipantLocations(participantIds);
 
@@ -277,7 +287,7 @@ class _PlaceVotingScreenState
               backgroundColor: isVoted
                   ? colors.primary
                   : colors.secondary,
-              onPressed: () => () //vote(place.placeId),
+              onPressed: () => vote(place.placeId),
             ),
           ),
         ],

@@ -16,6 +16,7 @@ import '../shared_widgets/app_card.dart';
 import '../shared_widgets/app_message.dart';
 import '../shared_widgets/app_search_field.dart';
 import '../states/notification_read_state.dart';
+import 'place_voting_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,6 +30,19 @@ class _HomePageState extends State<HomePage> {
   String? _streamUserId;
   final Map<String, List<String>> _participantIds = {};
   final Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> _voteStreams = {};
+
+  final Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> _invitationStreams = {};
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _pendingInvitationsFor(String gatheringId) {
+    return _invitationStreams.putIfAbsent(
+      gatheringId,
+      () => FirebaseFirestore.instance
+          .collection('invitations')
+          .where('gatheringId', isEqualTo: gatheringId)
+          .where('status', isEqualTo: 'pending')
+          .snapshots(),
+    );
+  }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _votesFor(String gatheringId) {
     return _voteStreams.putIfAbsent(
@@ -44,20 +58,26 @@ class _HomePageState extends State<HomePage> {
   int _planningProgress(
     GatheringModel gathering,
     QuerySnapshot<Map<String, dynamic>> votes,
+    QuerySnapshot<Map<String, dynamic>> invitations,
   ) {
     final participants = (_participantIds[gathering.id] ?? []).toSet();
-    if (participants.isEmpty) return 0;
-    final options = gathering.dateOptions.map((option) => option.id).toSet();
+    final expectedParticipants = {
+      ...participants,
+      ...invitations.docs.map((doc) => doc.data()['inviteeId'])
+          .whereType<String>().where((id) => id.trim().isNotEmpty),
+    };
+    if (expectedParticipants.isEmpty) return 0;
     final voters = <String>{};
     for (final doc in votes.docs) {
       final data = doc.data();
       final uid = data['userId'];
       if (uid is String && participants.contains(uid) &&
-          options.contains(data['targetId'])) {
+          data['targetId'] is String &&
+          (data['targetId'] as String).trim().isNotEmpty) {
         voters.add(uid);
       }
     }
-    return (100 * voters.length / participants.length).round();
+    return (100 * voters.length / expectedParticipants.length).round();
   }
   Stream<List<GatheringModel>>? _gatheringsStream;
 
@@ -71,6 +91,7 @@ class _HomePageState extends State<HomePage> {
       _streamUserId = userId;
       _participantIds.clear();
       _voteStreams.clear();
+      _invitationStreams.clear();
       _gatheringsStream = _watchGatherings(userId);
     }
     return _gatheringsStream!;
@@ -88,6 +109,7 @@ class _HomePageState extends State<HomePage> {
           final ids = snapshot.docs.map((doc) => doc.id).toSet();
           _participantIds.removeWhere((id, _) => !ids.contains(id));
           _voteStreams.removeWhere((id, _) => !ids.contains(id));
+          _invitationStreams.removeWhere((id, _) => !ids.contains(id));
           return snapshot.docs.map((document) {
             _participantIds[document.id] =
                 gatheringParticipantIds(document.data()) ?? [];
@@ -144,12 +166,15 @@ class _HomePageState extends State<HomePage> {
       context: context,
       gathering: gathering,
       currentUserId: userId,
-      onPlaceVoting: () {
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushNamed('/place-voting');
-      },
+ onPlaceVoting: () {
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute(
+      builder: (_) => PlaceVotingScreen(
+        gatheringId: gathering.id,
+      ),
+    ),
+  );
+},
       onUpdatePreferences: () {
         Navigator.of(
           context,
@@ -425,16 +450,28 @@ class _HomePageState extends State<HomePage> {
                                         if (!votes.hasData) {
                                           return const LinearProgressIndicator();
                                         }
-                                        final progress = _planningProgress(
-                                          gathering, votes.data!,
-                                        );
-                                        return Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Planning continues · $progress%'),
-                                            const SizedBox(height: 5),
-                                            LinearProgressIndicator(value: progress / 100),
-                                          ],
+                                        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                                          stream: _pendingInvitationsFor(gathering.id),
+                                          builder: (context, invitations) {
+                                            if (invitations.hasError) {
+                                              debugPrint('Failed to load pending invitations: ${invitations.error}');
+                                              return const Text('Unable to load voting progress');
+                                            }
+                                            if (!invitations.hasData) {
+                                              return const LinearProgressIndicator();
+                                            }
+                                            final progress = _planningProgress(
+                                              gathering, votes.data!, invitations.data!,
+                                            );
+                                            return Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Planning continues · $progress%'),
+                                                const SizedBox(height: 5),
+                                                LinearProgressIndicator(value: progress / 100),
+                                              ],
+                                            );
+                                          },
                                         );
                                       },
                                     ),

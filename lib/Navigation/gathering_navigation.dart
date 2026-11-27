@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/gathering_model.dart';
-import '../Pages/gathering_details_screen.dart';
+import '../Pages/gathering_details_screen.dart' show CreatorGatheringPage;
 import '../Pages/invitee_gather_details_screen.dart';
 import '../Pages/confirmed_gather_page.dart';
 
