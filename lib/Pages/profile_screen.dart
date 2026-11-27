@@ -4,6 +4,9 @@ import 'package:gather/Pages/language_screen.dart';
 import 'package:gather/Pages/login_screen.dart';
 import '../shared_widgets/app_button.dart';
 import '../shared_widgets/app_card.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import '../data/repositories/user_repository.dart';
+import '../models/user_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,6 +18,39 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   // Controls whether notifications are enabled.
   bool notificationsEnabled = true;
+
+  User? currentUser;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+
+    if (firebaseUser == null) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      return;
+    }
+
+    final loadedUser = await FirebaseUserRepository()
+        .getUserById(firebaseUser.uid);
+
+    if (!mounted) return;
+
+    setState(() {
+      currentUser = loadedUser;
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,12 +98,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
 
               const SizedBox(height: 12),
-
-              Text(
-                'Nour Al Sulais',
-                style: theme.textTheme.headlineMedium,
-              ),
-
+              if (isLoading)
+                const CircularProgressIndicator()
+              else
+                Text(
+                  currentUser?.fullName ?? 'User',
+                  style: theme.textTheme.headlineMedium,
+                ),
+              
               const SizedBox(height: 28),
 
               AppCard(
@@ -155,14 +193,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 32),
               AppButton(
                 text: 'Log out',
-                onPressed: () {
-                  // Clear the navigation stack and return to the login screen. 
+                onPressed: () async {
+                  await firebase_auth.FirebaseAuth.instance.signOut();
+
+                  if (!context.mounted) return;
+
                   Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => const LoginPage(),
-                  ),
-                  (route) => false,
-                );
+                    MaterialPageRoute(
+                      builder: (_) => const LoginPage(),
+                    ),
+                    (route) => false,
+                  );
                 },
               ),
 
