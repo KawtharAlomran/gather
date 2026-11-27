@@ -7,6 +7,7 @@ import '../shared_widgets/app_card.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../data/repositories/user_repository.dart';
 import '../models/user_model.dart';
+import 'help_support_page.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -177,7 +178,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: const Icon(Icons.help_outline),
                       title: const Text('Help & Support'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const HelpSupportPage(),
+                          ),
+                        );
+                      },
                     ),
 
                     ListTile(
