@@ -40,6 +40,10 @@ abstract class UserRepository {
     String friendId,
   );
   Future<void> sendPasswordResetEmail(String email);
+  Future<void> updateAvatar(
+    String userId,
+    String avatar,
+  );
 }
 
 // Firebase implementation of UserRepository.
@@ -317,6 +321,15 @@ Future<List<User>> getFriends(String userId) async {
     await _auth.sendPasswordResetEmail(
       email: email.trim(),
     );
+  }
+  @override
+  Future<void> updateAvatar(
+    String userId,
+    String avatar,
+  ) async {
+    await _firestore.collection('users').doc(userId).update({
+      'avatar': avatar,
+    });
   }
 }
 

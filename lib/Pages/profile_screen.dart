@@ -22,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   User? currentUser;
   bool isLoading = true;
+  String? selectedAvatar;
 
   @override
   void initState() {
@@ -49,11 +50,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() {
       currentUser = loadedUser;
+      selectedAvatar = loadedUser?.avatar;
       notificationsEnabled = loadedUser?.notificationsEnabled ?? true;
       isLoading = false;
     });
   }
+  Future<void> _showAvatarPicker() async {
+    const avatarOptions = [
+      {
+        'name': 'blue',
+        'color': Color.fromARGB(255, 114, 175, 225),
+      },
+      {
+        'name': 'orange',
+        'color': Color.fromARGB(255, 244, 160, 33),
+      },
+      {
+        'name': 'green',
+        'color': Color.fromARGB(255, 45, 131, 48),
+      },
+      {
+        'name': 'purple',
+        'color': Color.fromARGB(255, 126, 41, 142),
+      },
+      {
+        'name': 'pink',
+        'color': Color.fromARGB(255, 242, 82, 135),
+      },
+      {
+        'name': 'teal',
+        'color': Color.fromARGB(255, 7, 159, 144),
+      },
+      {
+        'name': 'default',
+        'color': Colors.grey,
+      },
+    ];
 
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Choose your avatar'),
+          content: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: avatarOptions.map((avatar) {
+              return GestureDetector(
+                onTap: () async {
+                  final avatarName = avatar['name'] as String;
+                  final firebaseUser =
+                      firebase_auth.FirebaseAuth.instance.currentUser;
+
+                  Navigator.pop(dialogContext);
+
+                  if (firebaseUser == null) return;
+
+                  await FirebaseUserRepository().updateAvatar(
+                    firebaseUser.uid,
+                    avatarName,
+                  );
+
+                  if (!mounted) return;
+
+                  setState(() {
+                    selectedAvatar = avatarName;
+                  });
+                },
+                child: CircleAvatar(
+                  radius: 25,
+                  backgroundColor: avatar['color'] as Color,
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 25,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _avatarColor(String? avatar) {
+    switch (avatar) {
+      case 'blue':
+        return Color.fromARGB(255, 104, 151, 189);
+      case 'orange':
+        return Color.fromARGB(255, 238, 173, 74);
+      case 'green':
+        return Color.fromARGB(255, 22, 85, 24);
+      case 'purple':
+        return Color.fromARGB(255, 85, 21, 96);
+      case 'pink':
+        return Color.fromARGB(255, 242, 82, 135);
+      case 'teal':
+        return Color.fromARGB(255, 7, 159, 144);
+      default:
+        return Colors.grey.shade200;
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -71,12 +170,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 58,
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: _avatarColor(selectedAvatar),
                     child: Icon(
                       Icons.person,
                       size: 64,
-                      color: Colors.grey.shade500,
-                    ),
+                      color: selectedAvatar == 'default' || selectedAvatar == null
+                          ? Colors.grey.shade500
+                          : Colors.white,                    ),
                   ),
 
                   Positioned(
@@ -90,9 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconSize: 18,
                         color: Colors.white,
                         icon: const Icon(Icons.edit),
-                        onPressed: () {
-                          // Image selection will be implemented in phase 4.
-                        },
+                        onPressed: _showAvatarPicker,
                       ),
                     ),
                   ),
