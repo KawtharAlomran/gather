@@ -35,6 +35,9 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
 
   String? _error;
 
+  // Ignore outdated search results if the text changes.
+  int _searchVersion = 0;
+
   @override
   void dispose() {
     emailController.dispose();
@@ -43,6 +46,9 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
 
   // Search for a registered user by exact email.
   Future<void> _searchEmail() async {
+    // Prevent duplicate searches.
+    if (_isSearching) return;
+
     final email = emailController.text.trim().toLowerCase();
 
     final isValid = RegExp(
@@ -58,6 +64,8 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
       return;
     }
 
+    final version = ++_searchVersion;
+
     setState(() {
       _isSearching = true;
       _error = null;
@@ -69,7 +77,7 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
       final user =
           await _userRepository.findUserByEmail(email);
 
-      if (!mounted) return;
+      if (!mounted || version != _searchVersion) return;
 
       final currentUserId =
           firebase_auth.FirebaseAuth.instance.currentUser?.uid;
@@ -86,7 +94,7 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
         }
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || version != _searchVersion) return;
 
       debugPrint('Email search error: $e');
 
@@ -98,21 +106,25 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
     }
   }
 
-  // Select or remove the found email.
+  // Select or remove an email.
   void _toggleEmail(String email) {
+    final normalizedEmail = email.trim().toLowerCase();
+
     final updatedEmails =
         List<String>.from(widget.selectedEmails);
 
     final exists = updatedEmails.any(
-      (item) => item.toLowerCase() == email.toLowerCase(),
+      (item) =>
+          item.toLowerCase() == normalizedEmail,
     );
 
     if (exists) {
       updatedEmails.removeWhere(
-        (item) => item.toLowerCase() == email.toLowerCase(),
+        (item) =>
+            item.toLowerCase() == normalizedEmail,
       );
     } else {
-      updatedEmails.add(email);
+      updatedEmails.add(normalizedEmail);
     }
 
     widget.onEmailsChanged(updatedEmails);
@@ -121,28 +133,48 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     final foundUser = _foundUser;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Email search field
+        // Email search field.
         TextField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
+
+          // Show the Search action on the keyboard.
           textInputAction: TextInputAction.search,
+
           style: theme.textTheme.bodyMedium,
+
+          // Search when Search/Enter is pressed.
+          onSubmitted: (_) => _searchEmail(),
+
+          onChanged: (_) {
+            // Invalidate results from older searches.
+            _searchVersion++;
+
+            setState(() {
+              _foundUser = null;
+              _hasSearched = false;
+              _error = null;
+            });
+          },
+
           decoration: InputDecoration(
             hintText: 'Search by email',
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
+
             prefixIcon: Icon(
               Icons.search,
               color: theme.colorScheme.onSurfaceVariant,
               size: 20,
             ),
+
+            // Search button or loading indicator.
             suffixIcon: _isSearching
                 ? const Padding(
                     padding: EdgeInsets.all(12),
@@ -155,20 +187,26 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
                     ),
                   )
                 : IconButton(
-                    icon: const Icon(Icons.arrow_forward),
+                    icon: const Icon(
+                      Icons.arrow_forward,
+                    ),
                     tooltip: 'Search email',
                     onPressed: _searchEmail,
                   ),
+
             filled: true,
             fillColor: theme.colorScheme.surface,
+
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
             ),
+
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
+
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
@@ -177,22 +215,16 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
               ),
             ),
           ),
-          onChanged: (_) {
-            setState(() {
-              _foundUser = null;
-              _hasSearched = false;
-              _error = null;
-            });
-          },
-          onSubmitted: (_) => _searchEmail(),
         ),
 
         const SizedBox(height: 12),
 
-        // Error message
+        // Error message.
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              vertical: 8,
+            ),
             child: Text(
               _error!,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -201,19 +233,21 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
             ),
           ),
 
-        // No registered user found
+        // No registered user found.
         if (_hasSearched &&
             foundUser == null &&
             _error == null)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              vertical: 8,
+            ),
             child: Text(
               'No registered user found with this email.',
               style: theme.textTheme.bodyMedium,
             ),
           ),
 
-        // Found user result
+        // Found user result.
         if (foundUser != null)
           Container(
             decoration: BoxDecoration(
@@ -229,16 +263,19 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
                   color: theme.colorScheme.secondary,
                 ),
               ),
+
               title: Text(
                 foundUser.fullName,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
               subtitle: Text(
                 foundUser.email,
                 style: theme.textTheme.bodyMedium,
               ),
+
               trailing: Checkbox(
                 value: widget.selectedEmails.any(
                   (email) =>
@@ -249,11 +286,12 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
                 onChanged: (_) =>
                     _toggleEmail(foundUser.email),
               ),
+
               onTap: () => _toggleEmail(foundUser.email),
             ),
           ),
 
-        // Selected email addresses
+        // Selected email addresses.
         if (widget.selectedEmails.isNotEmpty) ...[
           const SizedBox(height: 16),
 
@@ -286,3 +324,4 @@ class _EmailInviteWidgetState extends State<EmailInviteWidget> {
     );
   }
 }
+    
