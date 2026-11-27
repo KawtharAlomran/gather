@@ -52,17 +52,15 @@ class _SignUpPageState extends State<SignUpPage> {
 
     try {
       await _userRepository.signUp(
-        _firstNameController.text,
-        _lastNameController.text,
-        _emailController.text,
+        _firstNameController.text.trim(),
+        _lastNameController.text.trim(),
+        _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (!mounted) return;
+      await FirebaseAuth.instance.signOut();
 
-      setState(() {
-        isLoading = false;
-      });
+      if (!mounted) return;
 
       AppMessage.show(
         context,
@@ -72,20 +70,44 @@ class _SignUpPageState extends State<SignUpPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
+        MaterialPageRoute(
+          builder: (_) => const LoginPage(),
+        ),
       );
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
 
-      setState(() {
-        isLoading = false;
-      });
+      String message;
+
+      if (error.code == 'email-already-in-use') {
+        message = 'This email is already registered.';
+      } else if (error.code == 'weak-password') {
+        message = 'Password is too weak.';
+      } else if (error.code == 'invalid-email') {
+        message = 'Please enter a valid email.';
+      } else {
+        message = 'Could not create the account.';
+      }
 
       AppMessage.show(
         context,
-        message: error.message ?? 'Could not create the account.',
+        message: message,
         type: MessageType.error,
       );
+    } catch (error) {
+      if (!mounted) return;
+
+      AppMessage.show(
+        context,
+        message: 'Could not save your account. Please try again.',
+        type: MessageType.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
