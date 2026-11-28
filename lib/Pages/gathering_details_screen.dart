@@ -42,6 +42,13 @@ class CreatorGatheringPage extends StatefulWidget {
 }
 
 class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
+
+  final PreferenceRepository _preferenceRepository =
+    FirebasePreferenceRepository();
+
+    bool _preferencesComplete = false;
+    bool _checkingPreferences = true;
+
   final _voteRepository = VoteRepository();
   late Stream<List<Vote>> _votes;
   late Future<List<DateOptionModel>> _dateOptions;
@@ -51,11 +58,37 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
   void initState() {
     super.initState();
     _subscribeVotes();
+    _checkPreferences();
   }
 
   void _subscribeVotes() {
     _dateOptions = loadDateOptions(widget.gathering);
     _votes = _voteRepository.watchVotes(widget.gathering.id, targetType: 'datetime');
+  }
+
+  Future<void> _checkPreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      setState(() {
+        _checkingPreferences = false;
+      });
+      return;
+    }
+
+    final document = await FirebaseFirestore.instance
+        .collection('preferences')
+        .doc(user.uid)
+        .get();
+
+    if (!mounted) return;
+
+    setState(() {
+      _preferencesComplete =
+          document.exists &&
+          document.data()?['isCompleted'] == true;
+      _checkingPreferences = false;
+    });
   }
 
   @override
@@ -66,23 +99,59 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
 
   Future<void> _changeVote(String? optionId) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || _savingVote || widget.gathering.votingEnded) return;
+
+    if (user == null ||
+        _savingVote ||
+        widget.gathering.votingEnded) {
+      return;
+    }
+
+    if (!_preferencesComplete) {
+      AppMessage.show(
+        context,
+        message:
+            'Please set your preferences before voting.',
+        type: MessageType.error,
+      );
+
+      widget.onUpdatePreferences();
+      return;
+    }
+
     setState(() => _savingVote = true);
+
     try {
       if (optionId == null) {
-        await _voteRepository.deleteVote(gatheringId: widget.gathering.id,
-          userId: user.uid, targetType: 'datetime');
+        await _voteRepository.deleteVote(
+          gatheringId: widget.gathering.id,
+          userId: user.uid,
+          targetType: 'datetime',
+        );
       } else {
-        await _voteRepository.saveVote(gatheringId: widget.gathering.id,
-          userId: user.uid, targetId: optionId, targetType: 'datetime');
+        await _voteRepository.saveVote(
+          gatheringId: widget.gathering.id,
+          userId: user.uid,
+          targetId: optionId,
+          targetType: 'datetime',
+        );
       }
     } catch (error) {
       debugPrint('Vote write failed: $error');
-      if (mounted) AppMessage.show(context, message: 'Could not update vote.', type: MessageType.error);
+
+      if (mounted) {
+        AppMessage.show(
+          context,
+          message: 'Could not update vote.',
+          type: MessageType.error,
+        );
+      }
     } finally {
-      if (mounted) setState(() => _savingVote = false);
+      if (mounted) {
+        setState(() => _savingVote = false);
+      }
     }
   }
+
 Future<void> _endVoting() async {
   final gathering = widget.gathering;
 
@@ -182,12 +251,33 @@ Future<void> _endVoting() async {
                           if (vote.userId == uid) selected = vote.targetId;
                         }
                         final total = counts.values.fold<int>(0, (a, b) => a + b);
-                        final canVote = uid != null && !_savingVote && !gathering.votingEnded;
+                        final canVote =
+                          uid != null &&
+                          !_savingVote &&
+                          !_checkingPreferences &&
+                          _preferencesComplete &&
+                          !gathering.votingEnded;
                         return Column(children: [
                           Row(children: [
                             const Expanded(child: Text('Vote: Best Date')),
                             Text('Votes cast: $total'),
                           ]),
+                          if (_checkingPreferences)
+                            const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: CircularProgressIndicator(),
+                            )
+                          else if (!_preferencesComplete)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                'Set your preferences before voting.',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           for (final option in options)
                             RadioListTile<String>(
                               value: option.id,
