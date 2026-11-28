@@ -78,18 +78,9 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
       final hasAppPlaces = loadedPlaces.any((place) => place.source == 'app');
 
       if (!hasAppPlaces) {
-        final document = await FirebaseFirestore.instance
-            .collection('gatherings')
-            .doc(gatheringId)
-            .get();
-
-        final data = document.data();
-
-        if (data == null) {
-          throw Exception('Gathering not found.');
-        }
-
-        final participantIds = List<String>.from(data['participantIds'] ?? []);
+        final participantIds = List<String>.from(
+          accessData['participantIds'] ?? [],
+        );
 
         // Load user-suggested places.
         final userSuggestedPlaces = await _loadUserSuggestedPlaces(
@@ -98,7 +89,8 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
 
         // Find the group center.
         final locations = await preferenceRepository.getParticipantLocations(
-          participantIds, gatheringId: gatheringId,
+          participantIds,
+          gatheringId: gatheringId,
         );
 
         if (locations.isEmpty) {
@@ -140,10 +132,6 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
       setState(() {
         places = loadedPlaces;
         isLoading = false;
-
-        if (places.isEmpty) {
-          errorMessage = 'No places found.';
-        }
       });
     } catch (error) {
       debugPrint('Error loading places: $error');
@@ -164,7 +152,8 @@ class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
 
     for (final userId in participantIds) {
       final document = await FirebaseFirestore.instance
-          .collection('gatherings').doc(gatheringId)
+          .collection('gatherings')
+          .doc(gatheringId)
           .collection('preferences')
           .doc(userId)
           .get();
