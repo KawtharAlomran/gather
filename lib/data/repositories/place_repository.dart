@@ -96,6 +96,7 @@ class FirebasePlaceRepository implements PlaceRepository {
         'latitude': place.latitude,
         'longitude': place.longitude,
         'outdoorSeating': place.outdoorSeating,
+        'source': place.source,
       });
     }
 
@@ -128,6 +129,7 @@ class FirebasePlaceRepository implements PlaceRepository {
           0.0,
       'outdoorSeating':
           data['outdoorSeating'] == true,
+      'source': data['source']?.toString() ?? 'user',
     });
   }
 }

@@ -72,8 +72,11 @@ class _PlaceVotingScreenState
       var loadedPlaces =
           await placeRepository.getPlacesForGathering(gatheringId);
 
-      // If no places are saved, search and save them once.
-      if (loadedPlaces.isEmpty) {
+      final hasAppPlaces = loadedPlaces.any(
+        (place) => place.source == 'app',
+      );
+
+      if (!hasAppPlaces) {
         final document = await FirebaseFirestore.instance
             .collection('gatherings')
             .doc(gatheringId)
@@ -89,6 +92,11 @@ class _PlaceVotingScreenState
           data['participantIds'] ?? [],
         );
 
+        // Load user-suggested places.
+        final userSuggestedPlaces =
+            await _loadUserSuggestedPlaces(participantIds);
+
+        // Find the group center.
         final locations = await preferenceRepository
             .getParticipantLocations(participantIds);
 
@@ -101,11 +109,34 @@ class _PlaceVotingScreenState
         final center =
             locationService.calculateGroupCenter(locations);
 
-        loadedPlaces =
-            await searchRepository.searchNearbyPlaces(
-          latitude: center['latitude']!,
-          longitude: center['longitude']!,
-        );
+        // Search places recommended by the app.
+        List<Place> appPlaces = [];
+        try {
+          appPlaces = await searchRepository.searchNearbyPlaces(
+            latitude: center['latitude']!,
+            longitude: center['longitude']!,
+          );
+        } catch (error) {
+          debugPrint('First map server failed: $error');
+
+          try {
+            appPlaces = await searchRepository.searchNearbyPlacesFromBackup(
+              latitude: center['latitude']!,
+              longitude: center['longitude']!,
+            );
+          } catch (backupError) {
+            throw Exception(
+              'Could not find nearby places from participant locations.',
+            );
+          }
+        }
+
+        // Keep user suggestions and add app recommendations.
+        loadedPlaces = [
+          ...loadedPlaces,
+          ...userSuggestedPlaces,
+          ...appPlaces,
+        ];
 
         await placeRepository.savePlacesForGathering(
           gatheringId,
@@ -133,6 +164,52 @@ class _PlaceVotingScreenState
         errorMessage = error.toString();
       });
     }
+  }
+  
+  Future<List<Place>> _loadUserSuggestedPlaces(
+    List<String> participantIds,
+  ) async {
+    final suggestions = <Place>[];
+
+    for (final userId in participantIds) {
+      final document = await FirebaseFirestore.instance
+          .collection('preferences')
+          .doc(userId)
+          .get();
+
+      final data = document.data();
+
+      if (data == null) continue;
+
+      final locations = List<String>.from(
+        data['suggestedLocations'] ?? [],
+      );
+
+      for (var index = 0; index < locations.length; index++) {
+        final parts = locations[index].split(',');
+
+        if (parts.length != 2) continue;
+
+        final latitude = double.tryParse(parts[0].trim());
+        final longitude = double.tryParse(parts[1].trim());
+
+        if (latitude == null || longitude == null) continue;
+
+        suggestions.add(
+          Place(
+            placeId: 'user_${userId}_$index',
+            name: 'User suggested place',
+            category: 'Suggested place',
+            address: locations[index],
+            latitude: latitude,
+            longitude: longitude,
+            source: 'user',
+          ),
+        );
+      }
+    }
+
+    return suggestions;
   }
 
   Future<void> vote(String placeId) async {
@@ -282,6 +359,32 @@ class _PlaceVotingScreenState
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 5,
+            ),
+            decoration: BoxDecoration(
+              color: place.source == 'user'
+                  ? Colors.orange.shade100
+                  : Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              place.source == 'user'
+                  ? 'Suggested by a user'
+                  : 'Recommended by the app',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: place.source == 'user'
+                    ? Colors.orange.shade900
+                    : Colors.blue.shade900,
+              ),
+            ),
           ),
 
           const SizedBox(height: 12),

@@ -10,6 +10,7 @@ class Place {
   final double latitude;
   final double longitude;
   final bool outdoorSeating;
+  final String source;
 
   const Place({
     required this.placeId,
@@ -23,6 +24,7 @@ class Place {
     this.phone,
     this.website,
     this.outdoorSeating = false,
+    this.source = 'app',
   });
 
   factory Place.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class Place {
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       outdoorSeating: json['outdoorSeating'] == true,
+      source: json['source']?.toString() ?? 'app',
     );
   }
 
