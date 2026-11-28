@@ -14,6 +14,7 @@ import '../data/services/location_service.dart';
 
 class PlaceVotingScreen extends StatefulWidget {
   final String gatheringId;
+  
   const PlaceVotingScreen({
     super.key,
     required this.gatheringId,
@@ -26,6 +27,9 @@ class PlaceVotingScreen extends StatefulWidget {
 
 class _PlaceVotingScreenState
     extends State<PlaceVotingScreen> {
+  bool isLoading = true;
+  String? errorMessage;
+
   final OpenStreetMapRepository placeRepository =
       OpenStreetMapRepository();
 
@@ -48,6 +52,8 @@ class _PlaceVotingScreenState
 
   @override
   void initState() {
+    isLoading = true;
+    errorMessage = null;
     super.initState();
     loadPlaces();
     loadUserVote();
@@ -73,9 +79,14 @@ class _PlaceVotingScreenState
           .getParticipantLocations(participantIds);
 
       if (locations.isEmpty) {
-        debugPrint(
-          'No participant preferences completed yet.',
-        );
+        if (!mounted) return;
+
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              'No participant has selected a location yet.';
+        });
+
         return;
       }
 
@@ -92,9 +103,21 @@ class _PlaceVotingScreenState
 
       setState(() {
         places = loadedPlaces.take(3).toList();
+        isLoading = false;
+
+        if (places.isEmpty) {
+          errorMessage = 'No restaurants found nearby.';
+        }
       });
-    } catch (e) {
+        } catch (e) {
       debugPrint('Error loading places: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Unable to load nearby places.';
+      });
     }
   }
 
@@ -185,20 +208,25 @@ class _PlaceVotingScreenState
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: places.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : ListView.separated(
-                      itemCount: places.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        return buildPlaceCard(
-                          places[index],
-                        );
-                      },
-                    ),
+              child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : errorMessage != null
+                    ? Center(
+                        child: Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: places.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          return buildPlaceCard(places[index]);
+                        },
+                      ),
             ),
           ],
         ),

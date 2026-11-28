@@ -339,6 +339,8 @@ class _LocationPreferenceScreenState
       activities: widget.selectedActivities,
       location: locationName,
       suggestedLocations: suggestedLocations,
+      latitude: selectedLocation.latitude,
+      longitude: selectedLocation.longitude,
     );
 
     await repository.savePreferences(preferences);
