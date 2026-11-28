@@ -4,6 +4,9 @@ import 'package:gather/Pages/location_preference_screen.dart';
 import 'package:gather/shared_widgets/app_button.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/models/gathering_model.dart';
+import '../data/repositories/preference_repository.dart';
+import '../models/preference_model.dart';
+import '../models/gathering_model.dart';
 
 class TimePreferenceScreen extends StatefulWidget {
   final Gathering gathering;
@@ -13,6 +16,27 @@ class TimePreferenceScreen extends StatefulWidget {
     required this.gathering,
   });
 
+  factory TimePreferenceScreen.fromGatheringModel({
+  Key? key,
+  required GatheringModel gathering,
+  }) {
+  return TimePreferenceScreen(
+    key: key,
+      gathering: Gathering(
+        id: gathering.id,
+        title: gathering.title,
+        creatorEmail: '',
+        participantIds: gathering.participantIds,
+        startDate: gathering.startDate,
+        endDate: gathering.endDate,
+        minBudget: gathering.minBudget,
+        maxBudget: gathering.maxBudget,
+        activities: gathering.activities,
+      ),
+    );
+  }
+
+
   @override
   State<TimePreferenceScreen> createState() =>
       _TimePreferenceScreenState();
@@ -21,12 +45,13 @@ class TimePreferenceScreen extends StatefulWidget {
 class _TimePreferenceScreenState
     extends State<TimePreferenceScreen> {
   DateTime? selectedDay; // The currently selected day in the calendar
-  final Set<DateTime> selectedDates = {}; // Stores the selected dates
 
   // Stores the selected time for each date
-  final Map<DateTime, String> selectedTimes = {};
 
+  final Set<DateTime> selectedDates = {};
+  final Map<DateTime, String> selectedTimes = {};
   final Set<String> selectedActivities = {};
+  bool isLoading = true;
 
   List<String> get activities =>
       widget.gathering.activities;
@@ -39,6 +64,48 @@ class _TimePreferenceScreenState
     return DateTime(date.year, date.month, date.day);
   }
 
+  Future<void> _loadSavedPreferences() async {
+    final saved =
+        await FirebasePreferenceRepository().getMyPreferences();
+
+    if (!mounted) return;
+
+    if (saved != null) {
+      final validDates = saved.dates
+        .map(_dateOnly)
+        .toList();
+
+      setState(() {
+        selectedDates
+          ..clear()
+          ..addAll(validDates);
+
+        selectedTimes.clear();
+        for (final entry in saved.times.entries) {
+          final date = DateTime(
+            entry.key.year,
+            entry.key.month,
+            entry.key.day,
+          );
+
+          if (validDates.any((validDate) => isSameDay(validDate, date))) {
+            selectedTimes[date] = entry.value;
+          }
+        }
+
+        selectedActivities
+          ..clear()
+          ..addAll(saved.activities);
+
+      });
+    }
+
+    setState(() {
+      isLoading = false;
+    });
+    debugPrint('Saved preferences: $saved');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,12 +116,13 @@ class _TimePreferenceScreenState
 
     lastCalendarDay = _dateOnly(
       widget.gathering.endDate ??
-          firstCalendarDay.add(
-            const Duration(days: 365),
-          ),
+          firstCalendarDay.add(const Duration(days: 365)),
     );
 
+    // Always start inside the valid calendar range.
     focusedDay = firstCalendarDay;
+
+    _loadSavedPreferences();
   }
 
   @override

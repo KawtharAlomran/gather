@@ -17,6 +17,7 @@ import '../shared_widgets/app_message.dart';
 import '../shared_widgets/app_search_field.dart';
 import '../states/notification_read_state.dart';
 import 'place_voting_screen.dart';
+import 'time_preference_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -163,23 +164,26 @@ class _HomePageState extends State<HomePage> {
     if (userId == null) return;
 
     openGatheringDetails(
-      context: context,
-      gathering: gathering,
-      currentUserId: userId,
- onPlaceVoting: () {
-  Navigator.of(context, rootNavigator: true).push(
-    MaterialPageRoute(
-      builder: (_) => PlaceVotingScreen(
-        gatheringId: gathering.id,
-      ),
-    ),
-  );
-},
+            context: context,
+            gathering: gathering,
+            currentUserId: userId,
+        onPlaceVoting: () {
+        Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (_) => PlaceVotingScreen(
+              gatheringId: gathering.id,
+            ),
+          ),
+        );
+      },
       onUpdatePreferences: () {
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushNamed('/update-preferences');
+        Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (_) => TimePreferenceScreen.fromGatheringModel(
+              gathering: gathering,
+            ),
+          ),
+        );
       },
       onChanged: (_) {
         if (mounted) {

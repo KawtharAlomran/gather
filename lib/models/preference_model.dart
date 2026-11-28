@@ -22,12 +22,14 @@ class PreferenceModel {
       'dates': dates
           .map((date) => date.toIso8601String())
           .toList(),
-      'times': times.map(
-        (date, time) => MapEntry(
-          date.toIso8601String(),
-          time,
-        ),
-      ),
+      'times': {
+        for (final entry in times.entries)
+          DateTime(
+            entry.key.year,
+            entry.key.month,
+            entry.key.day,
+          ).toIso8601String(): entry.value,
+      },
       'activities': activities,
       'location': location,
       'suggestedLocations': suggestedLocations,

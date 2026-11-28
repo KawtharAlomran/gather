@@ -45,6 +45,25 @@ Future<void> savePreferences(
     });
     await batch.commit();
   }
+
+  @override
+  Future<PreferenceModel?> getMyPreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return null;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('preferences')
+        .doc(user.uid)
+        .get();
+
+    final data = snapshot.data();
+
+    if (data == null) return null;
+
+    return PreferenceModel.fromJson(data);
+  }
+
   @override
   Future<List<Map<String, double>>>
       getParticipantLocations(
