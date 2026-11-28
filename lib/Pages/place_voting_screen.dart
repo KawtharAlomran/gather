@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gather/models/place_model.dart';
 import 'package:gather/shared_widgets/app_card.dart';
 import 'package:gather/shared_widgets/app_button.dart';
@@ -10,6 +9,8 @@ import '../data/repositories/openstreetmap_repository.dart';
 import '../data/repositories/vote_repository.dart';
 import '../data/repositories/preference_repository.dart';
 import '../data/services/location_service.dart';
+import '../data/repositories/place_repository.dart';
+
 
 
 class PlaceVotingScreen extends StatefulWidget {
@@ -30,7 +31,10 @@ class _PlaceVotingScreenState
   bool isLoading = true;
   String? errorMessage;
 
-  final OpenStreetMapRepository placeRepository =
+  final FirebasePlaceRepository placeRepository =
+    FirebasePlaceRepository();
+
+  final OpenStreetMapRepository searchRepository =
       OpenStreetMapRepository();
 
   final VoteRepository voteRepository =
@@ -52,8 +56,6 @@ class _PlaceVotingScreenState
 
   @override
   void initState() {
-    isLoading = true;
-    errorMessage = null;
     super.initState();
     loadPlaces();
     loadUserVote();
@@ -61,62 +63,74 @@ class _PlaceVotingScreenState
 
   Future<void> loadPlaces() async {
     try {
-      final document = await FirebaseFirestore.instance
-          .collection('gatherings')
-          .doc(gatheringId)
-          .get();
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
 
-      final data = document.data();
-      if (data == null) {
-        throw StateError('Gathering does not exist.');
+      // First, load places already saved for this gathering.
+      var loadedPlaces =
+          await placeRepository.getPlacesForGathering(gatheringId);
+
+      // If no places are saved, search and save them once.
+      if (loadedPlaces.isEmpty) {
+        final document = await FirebaseFirestore.instance
+            .collection('gatherings')
+            .doc(gatheringId)
+            .get();
+
+        final data = document.data();
+
+        if (data == null) {
+          throw Exception('Gathering not found.');
+        }
+
+        final participantIds = List<String>.from(
+          data['participantIds'] ?? [],
+        );
+
+        final locations = await preferenceRepository
+            .getParticipantLocations(participantIds);
+
+        if (locations.isEmpty) {
+          throw Exception(
+            'No participant locations are available.',
+          );
+        }
+
+        final center =
+            locationService.calculateGroupCenter(locations);
+
+        loadedPlaces =
+            await searchRepository.searchNearbyPlaces(
+          latitude: center['latitude']!,
+          longitude: center['longitude']!,
+        );
+
+        await placeRepository.savePlacesForGathering(
+          gatheringId,
+          loadedPlaces,
+        );
       }
-
-      final participantIds = List<String>.from(
-        data['participantIds'] ?? [],
-      );
-
-      final locations = await preferenceRepository
-          .getParticipantLocations(participantIds);
-
-      if (locations.isEmpty) {
-        if (!mounted) return;
-
-        setState(() {
-          isLoading = false;
-          errorMessage =
-              'No participant has selected a location yet.';
-        });
-
-        return;
-      }
-
-      final center =
-          locationService.calculateGroupCenter(locations);
-
-      final loadedPlaces =
-          await placeRepository.searchNearbyPlaces(
-        latitude: center['latitude']!,
-        longitude: center['longitude']!,
-      );
 
       if (!mounted) return;
 
       setState(() {
-        places = loadedPlaces.take(3).toList();
+        places = loadedPlaces;
         isLoading = false;
 
         if (places.isEmpty) {
-          errorMessage = 'No restaurants found nearby.';
+          errorMessage = 'No places found.';
         }
       });
-        } catch (e) {
-      debugPrint('Error loading places: $e');
+    } catch (error) {
+      debugPrint('Error loading places: $error');
 
       if (!mounted) return;
 
       setState(() {
         isLoading = false;
-        errorMessage = 'Unable to load nearby places.';
+        errorMessage = error.toString();
       });
     }
   }
@@ -272,33 +286,40 @@ class _PlaceVotingScreenState
 
           const SizedBox(height: 12),
 
+          _infoRow(
+            Icons.category_outlined,
+            place.category,
+          ),
+
+          _infoRow(
+            Icons.location_on_outlined,
+            place.address.isNotEmpty
+                ? place.address
+                : 'Address unavailable',
+          ),
+
+          _infoRow(
+            Icons.map_outlined,
+            '${place.latitude.toStringAsFixed(5)}, '
+            '${place.longitude.toStringAsFixed(5)}',
+          ),
+
           if (place.cuisine != null &&
               place.cuisine!.isNotEmpty)
-            _infoRow(
-              Icons.restaurant_menu,
-              place.cuisine!,
-            ),
-
-          if (place.address.isNotEmpty)
-            _infoRow(
-              Icons.location_on_outlined,
-              place.address,
-            ),
+            _infoRow(Icons.restaurant_menu, place.cuisine!),
 
           if (place.openingHours != null &&
               place.openingHours!.isNotEmpty)
-            _infoRow(
-              Icons.access_time,
-              place.openingHours!,
-            ),
+            _infoRow(Icons.access_time, place.openingHours!),
 
           if (place.phone != null &&
               place.phone!.isNotEmpty)
-            _infoRow(
-              Icons.phone_outlined,
-              place.phone!,
-            ),
+            _infoRow(Icons.phone_outlined, place.phone!),
 
+          if (place.website != null &&
+              place.website!.isNotEmpty)
+            _infoRow(Icons.language, place.website!),
+          
           if (place.outdoorSeating)
             _infoRow(
               Icons.deck_outlined,
