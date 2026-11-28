@@ -68,91 +68,66 @@ class _PlaceVotingScreenState
         errorMessage = null;
       });
 
-      // First, load places already saved for this gathering.
-      var loadedPlaces =
-          await placeRepository.getPlacesForGathering(gatheringId);
+      final gatheringDocument = await FirebaseFirestore.instance
+          .collection('gatherings')
+          .doc(gatheringId)
+          .get();
 
-      final hasAppPlaces = loadedPlaces.any(
-        (place) => place.source == 'app',
+      final gatheringData = gatheringDocument.data();
+
+      if (gatheringData == null) {
+        throw Exception('Gathering not found.');
+      }
+
+      final participantIds = List<String>.from(
+        gatheringData['participantIds'] ?? [],
       );
 
-      if (!hasAppPlaces) {
-        final document = await FirebaseFirestore.instance
-            .collection('gatherings')
-            .doc(gatheringId)
-            .get();
+      // Get all participant locations.
+      final locations = await preferenceRepository
+          .getParticipantLocations(participantIds);
 
-        final data = document.data();
+      final center =
+          locationService.calculateGroupCenter(locations);
 
-        if (data == null) {
-          throw Exception('Gathering not found.');
-        }
-
-        final participantIds = List<String>.from(
-          data['participantIds'] ?? [],
+      // Get places recommended by the app.
+      List<Place> appPlaces = [];
+      try {
+        appPlaces = await searchRepository.searchNearbyPlaces(
+          latitude: center['latitude']!,
+          longitude: center['longitude']!,
         );
+      } catch (error) {
+        debugPrint('Primary server failed: $error');
 
-        // Load user-suggested places.
-        final userSuggestedPlaces =
-            await _loadUserSuggestedPlaces(participantIds);
-
-        // Find the group center.
-        final locations = await preferenceRepository
-            .getParticipantLocations(participantIds);
-
-        if (locations.isEmpty) {
-          throw Exception(
-            'No participant locations are available.',
-          );
-        }
-
-        final center =
-            locationService.calculateGroupCenter(locations);
-
-        // Search places recommended by the app.
-        List<Place> appPlaces = [];
-        try {
-          appPlaces = await searchRepository.searchNearbyPlaces(
-            latitude: center['latitude']!,
-            longitude: center['longitude']!,
-          );
-        } catch (error) {
-          debugPrint('First map server failed: $error');
-
-          try {
-            appPlaces = await searchRepository.searchNearbyPlacesFromBackup(
-              latitude: center['latitude']!,
-              longitude: center['longitude']!,
-            );
-          } catch (backupError) {
-            throw Exception(
-              'Could not find nearby places from participant locations.',
-            );
-          }
-        }
-
-        // Keep user suggestions and add app recommendations.
-        loadedPlaces = [
-          ...loadedPlaces,
-          ...userSuggestedPlaces,
-          ...appPlaces,
-        ];
-
-        await placeRepository.savePlacesForGathering(
-          gatheringId,
-          loadedPlaces,
+        appPlaces =
+            await searchRepository.searchNearbyPlacesFromBackup(
+          latitude: center['latitude']!,
+          longitude: center['longitude']!,
         );
       }
+
+      // Get places suggested by users.
+      final userPlaces =
+          await _loadUserSuggestedPlaces(participantIds);
+
+      // Combine both lists.
+      final allPlaces = [
+        ...appPlaces,
+        ...userPlaces,
+      ];
+
+      // Save the same list for this gathering.
+      await placeRepository.savePlacesForGathering(
+        gatheringId,
+        allPlaces,
+      );
 
       if (!mounted) return;
 
       setState(() {
-        places = loadedPlaces;
+        places = allPlaces;
         isLoading = false;
-
-        if (places.isEmpty) {
-          errorMessage = 'No places found.';
-        }
       });
     } catch (error) {
       debugPrint('Error loading places: $error');
@@ -165,7 +140,7 @@ class _PlaceVotingScreenState
       });
     }
   }
-  
+    
   Future<List<Place>> _loadUserSuggestedPlaces(
     List<String> participantIds,
   ) async {
