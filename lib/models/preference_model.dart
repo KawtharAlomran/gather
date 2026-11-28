@@ -20,7 +20,7 @@ class PreferenceModel {
   Map<String, dynamic> toJson() {
     return {
       'dates': dates
-          .map((date) => date.toIso8601String())
+          .map((date) => DateTime(date.year, date.month, date.day).toIso8601String())
           .toList(),
       'times': {
         for (final entry in times.entries)

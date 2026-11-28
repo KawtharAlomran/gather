@@ -343,7 +343,7 @@ class _LocationPreferenceScreenState
       longitude: selectedLocation.longitude,
     );
 
-    await repository.savePreferences(preferences);
+    await repository.savePreferences(preferences, gatheringId: widget.gathering.id);
 
     if (!mounted) return;
     // Show a success message to the user

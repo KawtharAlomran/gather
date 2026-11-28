@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,11 +29,15 @@ class _HomePageState extends State<HomePage> {
   String _search = '';
   String? _streamUserId;
   final Map<String, List<String>> _participantIds = {};
-  final Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> _voteStreams = {};
+  final Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> _voteStreams =
+      {};
 
-  final Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>> _invitationStreams = {};
+  final Map<String, Stream<QuerySnapshot<Map<String, dynamic>>>>
+  _invitationStreams = {};
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> _pendingInvitationsFor(String gatheringId) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> _pendingInvitationsFor(
+    String gatheringId,
+  ) {
     return _invitationStreams.putIfAbsent(
       gatheringId,
       () => FirebaseFirestore.instance
@@ -45,13 +48,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> _votesFor(String gatheringId) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> _votesFor(String gatheringId, String targetType) {
     return _voteStreams.putIfAbsent(
-      gatheringId,
+      '$gatheringId:$targetType',
       () => FirebaseFirestore.instance
           .collection('votes')
           .where('gatheringId', isEqualTo: gatheringId)
-          .where('targetType', isEqualTo: 'datetime')
+          .where('targetType', isEqualTo: targetType)
           .snapshots(),
     );
   }
@@ -64,15 +67,18 @@ class _HomePageState extends State<HomePage> {
     final participants = (_participantIds[gathering.id] ?? []).toSet();
     final expectedParticipants = {
       ...participants,
-      ...invitations.docs.map((doc) => doc.data()['inviteeId'])
-          .whereType<String>().where((id) => id.trim().isNotEmpty),
+      if (!gathering.votingEnded) ...invitations.docs
+          .map((doc) => doc.data()['inviteeId'])
+          .whereType<String>()
+          .where((id) => id.trim().isNotEmpty),
     };
     if (expectedParticipants.isEmpty) return 0;
     final voters = <String>{};
     for (final doc in votes.docs) {
       final data = doc.data();
       final uid = data['userId'];
-      if (uid is String && participants.contains(uid) &&
+      if (uid is String &&
+          participants.contains(uid) &&
           data['targetId'] is String &&
           (data['targetId'] as String).trim().isNotEmpty) {
         voters.add(uid);
@@ -80,10 +86,10 @@ class _HomePageState extends State<HomePage> {
     }
     return (100 * voters.length / expectedParticipants.length).round();
   }
+
   Stream<List<GatheringModel>>? _gatheringsStream;
 
-  String? get currentUserId =>
-      FirebaseAuth.instance.currentUser?.uid;
+  String? get currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
   // Listen to gatherings belonging to the current user.
   // Cache the stream to avoid reconnecting on each rebuild.
@@ -101,15 +107,12 @@ class _HomePageState extends State<HomePage> {
   Stream<List<GatheringModel>> _watchGatherings(String userId) {
     return FirebaseFirestore.instance
         .collection('gatherings')
-        .where(
-          'participantIds',
-          arrayContains: userId,
-        )
+        .where('participantIds', arrayContains: userId)
         .snapshots()
         .map((snapshot) {
           final ids = snapshot.docs.map((doc) => doc.id).toSet();
           _participantIds.removeWhere((id, _) => !ids.contains(id));
-          _voteStreams.removeWhere((id, _) => !ids.contains(id));
+          _voteStreams.removeWhere((key, _) => !ids.contains(key.split(':').first));
           _invitationStreams.removeWhere((id, _) => !ids.contains(id));
           return snapshot.docs.map((document) {
             _participantIds[document.id] =
@@ -140,10 +143,7 @@ class _HomePageState extends State<HomePage> {
 
       if (!mounted) return;
 
-      AppMessage.show(
-        context,
-        message: 'You left the gathering.',
-      );
+      AppMessage.show(context, message: 'You left the gathering.');
     } catch (e) {
       if (!mounted) return;
 
@@ -164,24 +164,21 @@ class _HomePageState extends State<HomePage> {
     if (userId == null) return;
 
     openGatheringDetails(
-            context: context,
-            gathering: gathering,
-            currentUserId: userId,
-        onPlaceVoting: () {
+      context: context,
+      gathering: gathering,
+      currentUserId: userId,
+      onPlaceVoting: () {
         Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
-            builder: (_) => PlaceVotingScreen(
-              gatheringId: gathering.id,
-            ),
+            builder: (_) => PlaceVotingScreen(gatheringId: gathering.id),
           ),
         );
       },
       onUpdatePreferences: () {
         Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
-            builder: (_) => TimePreferenceScreen.fromGatheringModel(
-              gathering: gathering,
-            ),
+            builder: (_) =>
+                TimePreferenceScreen.fromGatheringModel(gathering: gathering),
           ),
         );
       },
@@ -205,15 +202,12 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             icon: ValueListenableBuilder<Set<String>>(
-              valueListenable:
-                  NotificationReadState.unreadKeys,
+              valueListenable: NotificationReadState.unreadKeys,
               builder: (context, unread, _) {
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(
-                      Icons.notifications_outlined,
-                    ),
+                    const Icon(Icons.notifications_outlined),
                     if (unread.isNotEmpty)
                       Positioned(
                         top: -2,
@@ -235,17 +229,14 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      const NotificationsPage(),
+                  builder: (context) => const NotificationsPage(),
                 ),
               );
             },
           ),
 
           IconButton(
-            icon: const Icon(
-              Icons.account_circle_outlined,
-            ),
+            icon: const Icon(Icons.account_circle_outlined),
             onPressed: () {
               BottomNavigation.selectTab(context, 2);
             },
@@ -254,60 +245,46 @@ class _HomePageState extends State<HomePage> {
       ),
 
       body: userId == null
-          ? const Center(
-              child: Text(
-                'Please log in to view your gatherings.',
-              ),
-            )
+          ? const Center(child: Text('Please log in to view your gatherings.'))
           : StreamBuilder<List<GatheringModel>>(
               stream: _streamForUser(userId),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  debugPrint(
-                    'Failed to load gatherings: ${snapshot.error}',
-                  );
+                  debugPrint('Failed to load gatherings: ${snapshot.error}');
                   final error = snapshot.error;
-                  final message = error is FirebaseException &&
+                  final message =
+                      error is FirebaseException &&
                           error.code == 'permission-denied'
                       ? 'Firestore access denied. Check gathering rules.'
                       : 'Failed to load gatherings. Check Debug Console.';
                   return Center(child: Text(message));
                 }
 
-                if (snapshot.connectionState ==
-                        ConnectionState.waiting &&
+                if (snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
 
-                final all =
-                    snapshot.data ?? <GatheringModel>[];
+                final all = snapshot.data ?? <GatheringModel>[];
 
                 final filtered = all.where((gathering) {
-                  return gathering.title
-                      .toLowerCase()
-                      .contains(_search.toLowerCase());
+                  return gathering.title.toLowerCase().contains(
+                    _search.toLowerCase(),
+                  );
                 }).toList();
 
                 final confirmed = filtered.where((g) {
-                  return g.status == 'confirmed' ||
-                      g.dateTime != null;
+                  return g.status == 'confirmed' || g.dateTime != null;
                 }).toList();
 
                 final planning = filtered.where((g) {
-                  return g.status != 'confirmed' &&
-                      g.dateTime == null;
+                  return g.status != 'confirmed' && g.dateTime == null;
                 }).toList();
 
                 return ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    Text(
-                      'Good morning 👋',
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    Text('Good morning 👋', style: theme.textTheme.bodySmall),
 
                     Text(
                       'Hey, welcome back!',
@@ -327,17 +304,12 @@ class _HomePageState extends State<HomePage> {
 
                     const SizedBox(height: 24),
 
-                    Text(
-                      'Upcoming Events',
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text('Upcoming Events', style: theme.textTheme.titleMedium),
 
                     const SizedBox(height: 12),
 
                     if (confirmed.isEmpty)
-                      const Text(
-                        'No confirmed gatherings',
-                      ),
+                      const Text('No confirmed gatherings'),
 
                     if (confirmed.isNotEmpty)
                       SizedBox(
@@ -345,37 +317,28 @@ class _HomePageState extends State<HomePage> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: confirmed.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(width: 12),
+                          separatorBuilder: (_, _) => const SizedBox(width: 12),
                           itemBuilder: (context, index) {
-                            final gathering =
-                                confirmed[index];
+                            final gathering = confirmed[index];
 
                             return SizedBox(
                               width: 235,
                               child: AppCard(
-                                onTap: () =>
-                                    _openGathering(gathering),
-                                padding:
-                                    const EdgeInsets.all(14),
+                                onTap: () => _openGathering(gathering),
+                                padding: const EdgeInsets.all(14),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       'CONFIRMED',
-                                      style: theme
-                                          .textTheme
-                                          .labelSmall,
+                                      style: theme.textTheme.labelSmall,
                                     ),
 
                                     const SizedBox(height: 12),
 
                                     Text(
                                       gathering.title,
-                                      style: theme
-                                          .textTheme
-                                          .titleMedium,
+                                      style: theme.textTheme.titleMedium,
                                       maxLines: 2,
                                     ),
 
@@ -383,17 +346,14 @@ class _HomePageState extends State<HomePage> {
 
                                     if (gathering.dateTime != null)
                                       Text(
-                                        MaterialLocalizations.of(
-                                          context,
-                                        ).formatMediumDate(
-                                          gathering.dateTime!
-                                              .toLocal(),
-                                        ),
+                                        MaterialLocalizations.of(context)
+                                            .formatMediumDate(
+                                              gathering.dateTime!.toLocal(),
+                                            ),
                                       ),
 
                                     Text(
-                                      gathering.place ??
-                                          'Place not specified',
+                                      gathering.place ?? 'Place not specified',
                                       maxLines: 1,
                                     ),
 
@@ -418,76 +378,86 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 12),
 
                     if (planning.isEmpty)
-                      const Text(
-                        'No gatherings in progress',
-                      ),
+                      const Text('No gatherings in progress'),
 
                     for (final gathering in planning)
                       Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: 10,
-                        ),
+                        padding: const EdgeInsets.only(bottom: 10),
                         child: AppCard(
-                          onTap: () =>
-                              _openGathering(gathering),
+                          onTap: () => _openGathering(gathering),
                           child: Row(
                             children: [
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       gathering.title,
-                                      style: theme
-                                          .textTheme
-                                          .titleMedium,
+                                      style: theme.textTheme.titleMedium,
                                     ),
 
-                                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                                      key: ValueKey(gathering.id),
-                                      stream: _votesFor(gathering.id),
-                                      builder: (context, votes) {
-                                        if (votes.hasError) {
-                                          return const Text('Unable to load voting progress');
-                                        }
-                                        if (!votes.hasData) {
-                                          return const LinearProgressIndicator();
-                                        }
-                                        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                                          stream: _pendingInvitationsFor(gathering.id),
-                                          builder: (context, invitations) {
-                                            if (invitations.hasError) {
-                                              debugPrint('Failed to load pending invitations: ${invitations.error}');
-                                              return const Text('Unable to load voting progress');
-                                            }
-                                            if (!invitations.hasData) {
-                                              return const LinearProgressIndicator();
-                                            }
-                                            final progress = _planningProgress(
-                                              gathering, votes.data!, invitations.data!,
+                                      StreamBuilder<
+                                        QuerySnapshot<Map<String, dynamic>>
+                                      >(
+                                        key: ValueKey('${gathering.id}:${gathering.votingEnded}'),
+                                        stream: _votesFor(gathering.id, gathering.votingEnded ? 'place' : 'datetime'),
+                                        builder: (context, votes) {
+                                          if (votes.hasError) {
+                                            return const Text(
+                                              'Unable to load voting progress',
                                             );
-                                            return Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text('Planning continues · $progress%'),
-                                                const SizedBox(height: 5),
-                                                LinearProgressIndicator(value: progress / 100),
-                                              ],
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
+                                          }
+                                          if (!votes.hasData) {
+                                            return const LinearProgressIndicator();
+                                          }
+                                          return StreamBuilder<
+                                            QuerySnapshot<Map<String, dynamic>>
+                                          >(
+                                            stream: _pendingInvitationsFor(
+                                              gathering.id,
+                                            ),
+                                            builder: (context, invitations) {
+                                              if (invitations.hasError) {
+                                                debugPrint(
+                                                  'Failed to load pending invitations: ${invitations.error}',
+                                                );
+                                                return const Text(
+                                                  'Unable to load voting progress',
+                                                );
+                                              }
+                                              if (!invitations.hasData) {
+                                                return const LinearProgressIndicator();
+                                              }
+                                              final progress =
+                                                  _planningProgress(
+                                                    gathering,
+                                                    votes.data!,
+                                                    invitations.data!,
+                                                  );
+                                              return Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    '${gathering.votingEnded ? 'Place voting' : 'Date & time voting'} · $progress%',
+                                                  ),
+                                                  const SizedBox(height: 5),
+                                                  LinearProgressIndicator(
+                                                    value: progress / 100,
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
                                   ],
                                 ),
                               ),
 
                               const SizedBox(width: 8),
 
-                              const Icon(
-                                Icons.chevron_right,
-                              ),
+                              const Icon(Icons.chevron_right),
                             ],
                           ),
                         ),
@@ -504,10 +474,7 @@ class _HomePageState extends State<HomePage> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const CreateGathering(),
-              ),
+              MaterialPageRoute(builder: (context) => const CreateGathering()),
             );
           },
         ),

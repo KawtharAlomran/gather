@@ -2,9 +2,16 @@
 // Allows the creator to manage date voting, view attendance,
 // and update gathering preferences.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../data/repositories/date_voting_repository.dart';
+import '../shared_widgets/selected_date_time_card.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/vote_model.dart';
 import '../data/repositories/vote_repository.dart';
 import '../data/repositories/preference_repository.dart';
@@ -21,8 +28,10 @@ class CreatorGatheringPage extends StatefulWidget {
   final VoidCallback onUpdatePreferences;
   final VoidCallback? onViewAttendance;
   final ValueChanged<GatheringModel>? onChanged;
+
   /// Parent must remove this gathering from its Home data source.
   final Future<void> Function(GatheringModel)? onLeaveGathering;
+
   /// Supply actual attendee names from your repository; count alone is insufficient.
   final List<String> attendeeNames;
 
@@ -42,28 +51,64 @@ class CreatorGatheringPage extends StatefulWidget {
 }
 
 class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
-
   final PreferenceRepository _preferenceRepository =
-    FirebasePreferenceRepository();
+      FirebasePreferenceRepository();
 
-    bool _preferencesComplete = false;
-    bool _checkingPreferences = true;
+  bool _preferencesComplete = false;
+  bool _checkingPreferences = true;
 
   final _voteRepository = VoteRepository();
   late Stream<List<Vote>> _votes;
   late Future<List<DateOptionModel>> _dateOptions;
   bool _savingVote = false;
+  bool _endingVoting = false;
+  late GatheringModel _gathering;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+  _gatheringSubscription;
 
   @override
   void initState() {
     super.initState();
+    _gathering = widget.gathering;
     _subscribeVotes();
+    _watchGathering();
     _checkPreferences();
+  }
+
+  void _watchGathering() {
+    _gatheringSubscription?.cancel();
+    _gatheringSubscription = FirebaseFirestore.instance
+        .collection('gatherings')
+        .doc(_gathering.id)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            if (!mounted || !snapshot.exists) return;
+            setState(
+              () => _gathering = GatheringModel.fromJson({
+                ...snapshot.data()!,
+                'id': snapshot.id,
+              }),
+            );
+          },
+          onError: (Object error) {
+            debugPrint('Could not watch gathering: $error');
+          },
+        );
+  }
+
+  @override
+  void dispose() {
+    _gatheringSubscription?.cancel();
+    super.dispose();
   }
 
   void _subscribeVotes() {
     _dateOptions = loadDateOptions(widget.gathering);
-    _votes = _voteRepository.watchVotes(widget.gathering.id, targetType: 'datetime');
+    _votes = _voteRepository.watchVotes(
+      widget.gathering.id,
+      targetType: 'datetime',
+    );
   }
 
   Future<void> _checkPreferences() async {
@@ -85,8 +130,7 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
 
     setState(() {
       _preferencesComplete =
-          document.exists &&
-          document.data()?['isCompleted'] == true;
+          document.exists && document.data()?['isCompleted'] == true;
       _checkingPreferences = false;
     });
   }
@@ -94,7 +138,11 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
   @override
   void didUpdateWidget(covariant CreatorGatheringPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.gathering.id != widget.gathering.id) _subscribeVotes();
+    if (oldWidget.gathering.id != widget.gathering.id) {
+      _gathering = widget.gathering;
+      _subscribeVotes();
+      _watchGathering();
+    }
   }
 
   Future<void> _changeVote(String? optionId) async {
@@ -102,15 +150,15 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
 
     if (user == null ||
         _savingVote ||
-        widget.gathering.votingEnded) {
+        _endingVoting ||
+        _gathering.votingEnded) {
       return;
     }
 
     if (!_preferencesComplete) {
       AppMessage.show(
         context,
-        message:
-            'Please set your preferences before voting.',
+        message: 'Please set your preferences before voting.',
         type: MessageType.error,
       );
 
@@ -152,41 +200,42 @@ class _CreatorGatheringPageState extends State<CreatorGatheringPage> {
     }
   }
 
-Future<void> _endVoting() async {
-  final gathering = widget.gathering;
-
-  if (gathering.votingEnded) return;
-
-  try {
-    await FirebaseFirestore.instance
-        .collection('gatherings')
-        .doc(gathering.id)
-        .update({
-      'votingEnded': true,
-    });
-
-    if (!mounted) return;
-
-    setState(() {
-      gathering.votingEnded = true;
-    });
-
-    widget.onChanged?.call(gathering);
-
-  } catch (e) {
-    if (!mounted) return;
-
-    AppMessage.show(
-      context,
-      message: 'Could not end voting: $e',
-      type: MessageType.error,
-    );
+  Future<void> _endVoting() async {
+    if (_endingVoting ||
+        _savingVote ||
+        (_gathering.votingEnded && _gathering.selectedDate != null))
+      return;
+    setState(() => _endingVoting = true);
+    try {
+      final updated = await DateVotingRepository().endVoting(_gathering.id);
+      if (!mounted) return;
+      setState(() => _gathering = updated);
+      widget.onChanged?.call(updated);
+      AppMessage.show(
+        context,
+        message: 'Date and time selected. Place voting is ready.',
+      );
+    } catch (error) {
+      if (mounted) {
+        AppMessage.show(
+          context,
+          message: 'Could not end voting: $error',
+          type: MessageType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _endingVoting = false);
+    }
   }
-}
+
   Future<void> _leave() async {
     if (!await confirmLeaveGathering(context) || !mounted) return;
     if (widget.onLeaveGathering == null) {
-      AppMessage.show(context, message: 'Connect the leave action to your Home data source first.', type: MessageType.error);
+      AppMessage.show(
+        context,
+        message: 'Connect the leave action to your Home data source first.',
+        type: MessageType.error,
+      );
       return;
     }
     try {
@@ -194,14 +243,18 @@ Future<void> _endVoting() async {
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted) {
-        AppMessage.show(context, message: 'Could not leave the gathering. Please try again.', type: MessageType.error);
+        AppMessage.show(
+          context,
+          message: 'Could not leave the gathering. Please try again.',
+          type: MessageType.error,
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final gathering = widget.gathering;
+    final gathering = _gathering;
     final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(
@@ -219,98 +272,163 @@ Future<void> _endVoting() async {
                   const SizedBox(height: 18),
                   GatheringAttendanceCard(
                     count: gathering.attendingCount,
-                    subtitle: gathering.votingEnded ? 'Date voting ended' : 'Planning continues',
-                    onTap: widget.onViewAttendance ??
-                        () => openAttendance(context, widget.attendeeNames.isNotEmpty ? widget.attendeeNames : gathering.attendeeNames, gatheringId: gathering.id),
+                    subtitle: gathering.votingEnded
+                        ? 'Date voting ended'
+                        : 'Planning continues',
+                    onTap:
+                        widget.onViewAttendance ??
+                        () => openAttendance(
+                          context,
+                          widget.attendeeNames.isNotEmpty
+                              ? widget.attendeeNames
+                              : gathering.attendeeNames,
+                          gatheringId: gathering.id,
+                        ),
                   ),
                   const SizedBox(height: 16),
-                  AppCard(
-                    child: FutureBuilder<List<DateOptionModel>>(
-                      future: _dateOptions,
-                      builder: (context, dates) {
-                        if (dates.hasError) return Text('Could not load date preferences: ${dates.error}');
-                        if (!dates.hasData) return const Center(child: CircularProgressIndicator());
-                        final options = dates.data!;
-                        if (options.isEmpty) return const Text('No date preferences available yet.');
-                        return StreamBuilder<List<Vote>>(
-                      stream: _votes,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return const Text('Could not load votes.');
-                        }
-                        if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
-                        final counts = <String, int>{};
-                        String? selected;
-                        final optionIds = options.map((o) => o.id).toSet();
-                        for (final vote in snapshot.data!) {
-                          if (!optionIds.contains(vote.targetId) || !gathering.participantIds.contains(vote.userId)) continue;
-                          counts.update(vote.targetId, (n) => n + 1, ifAbsent: () => 1);
-                          if (vote.userId == uid) selected = vote.targetId;
-                        }
-                        final total = counts.values.fold<int>(0, (a, b) => a + b);
-                        final canVote =
-                          uid != null &&
-                          !_savingVote &&
-                          !_checkingPreferences &&
-                          _preferencesComplete &&
-                          !gathering.votingEnded;
-                        return Column(children: [
-                          Row(children: [
-                            const Expanded(child: Text('Vote: Best Date')),
-                            Text('Votes cast: $total'),
-                          ]),
-                          if (_checkingPreferences)
-                            const Padding(
-                              padding: EdgeInsets.all(8),
+                  if (gathering.votingEnded && gathering.selectedDate != null)
+                    SelectedDateTimeCard(gathering: gathering)
+                  else
+                    AppCard(
+                      child: FutureBuilder<List<DateOptionModel>>(
+                        future: _dateOptions,
+                        builder: (context, dates) {
+                          if (dates.hasError)
+                            return Text(
+                              'Could not load date preferences: ${dates.error}',
+                            );
+                          if (!dates.hasData)
+                            return const Center(
                               child: CircularProgressIndicator(),
-                            )
-                          else if (!_preferencesComplete)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(
-                                'Set your preferences before voting.',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          for (final option in options)
-                            RadioListTile<String>(
-                              value: option.id,
-                              groupValue: selected,
-                              title: Text(option.label),
-                              secondary: Text('Votes: ${counts[option.id] ?? 0}'),
-                              onChanged: canVote ? _changeVote : null,
-                            ),
-                          if (selected != null)
-                            TextButton(onPressed: canVote ? () => _changeVote(null) : null,
-                              child: const Text('Remove my vote')),
-                          AppButton(
-                            text: 'End Voting',
-                            onPressed: gathering.votingEnded || options.isEmpty || _savingVote
-                                ? null : () {
-                                  for (final option in options) {
-                                    option.votes = counts[option.id] ?? 0;
-                                  }
-                                  gathering.selectedOptionId = selected;
-                                  _endVoting();
-                                },
-                          ),
-                        ]);
-                      },
-                    );
-                      },
+                            );
+                          final options = dates.data!;
+                          if (options.isEmpty)
+                            return const Text(
+                              'No date preferences available yet.',
+                            );
+                          return StreamBuilder<List<Vote>>(
+                            stream: _votes,
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return const Text('Could not load votes.');
+                              }
+                              if (!snapshot.hasData) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              final uid =
+                                  FirebaseAuth.instance.currentUser?.uid;
+                              final counts = <String, int>{};
+                              String? selected;
+                              final optionIds = options
+                                  .map((o) => o.id)
+                                  .toSet();
+                              for (final vote in snapshot.data!) {
+                                if (!optionIds.contains(vote.targetId) ||
+                                    !gathering.participantIds.contains(
+                                      vote.userId,
+                                    ))
+                                  continue;
+                                counts.update(
+                                  vote.targetId,
+                                  (n) => n + 1,
+                                  ifAbsent: () => 1,
+                                );
+                                if (vote.userId == uid)
+                                  selected = vote.targetId;
+                              }
+                              final total = counts.values.fold<int>(
+                                0,
+                                (a, b) => a + b,
+                              );
+                              final canVote =
+                                  uid != null &&
+                                  !_savingVote &&
+                                  !_endingVoting &&
+                                  !_checkingPreferences &&
+                                  _preferencesComplete &&
+                                  !gathering.votingEnded;
+                              return Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        child: Text('Vote: Best Date'),
+                                      ),
+                                      Text('Votes cast: $total'),
+                                    ],
+                                  ),
+                                  if (_checkingPreferences)
+                                    const Padding(
+                                      padding: EdgeInsets.all(8),
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  else if (!_preferencesComplete)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Text(
+                                        'Set your preferences before voting.',
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .error,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  for (final option in options)
+                                    RadioListTile<String>(
+                                      value: option.id,
+                                      groupValue: selected,
+                                      title: Text(option.label),
+                                      secondary: Text(
+                                        'Votes: ${counts[option.id] ?? 0}',
+                                      ),
+                                      onChanged: canVote ? _changeVote : null,
+                                    ),
+                                  if (selected != null)
+                                    TextButton(
+                                      onPressed: canVote
+                                          ? () => _changeVote(null)
+                                          : null,
+                                      child: const Text('Remove my vote'),
+                                    ),
+                                  if (total == 0)
+                                    const Text(
+                                      'At least one date vote is needed to end voting.',
+                                    ),
+                                  AppButton(
+                                    text: _endingVoting
+                                        ? 'Ending voting...'
+                                        : 'End Voting',
+                                    onPressed:
+                                        options.isEmpty ||
+                                            total == 0 ||
+                                            _savingVote ||
+                                            _endingVoting
+                                        ? null
+                                        : _endVoting,
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 22),
-                  if (gathering.status != 'confirmed' && gathering.dateTime == null && gathering.votingEnded)
-                    AppButton(text: 'Place voting', onPressed: widget.onPlaceVoting)
-                  else if (gathering.status != 'confirmed' && gathering.dateTime == null)
-                    AppButton(text: 'Update My Preferences', onPressed: widget.onUpdatePreferences),
+                  if (gathering.votingEnded && gathering.selectedDate != null)
+                    AppButton(
+                      text: 'Place voting',
+                      onPressed: widget.onPlaceVoting,
+                    )
+                  else if (gathering.status != 'confirmed' &&
+                      gathering.dateTime == null)
+                    AppButton(
+                      text: 'Update My Preferences',
+                      onPressed: widget.onUpdatePreferences,
+                    ),
                 ],
               ),
             ),

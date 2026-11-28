@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum InvitationStatus { pending, accepted, declined }
+enum InvitationStatus { pending, accepted, declined, excluded }
 
 class InvitationModel {
   final String id;

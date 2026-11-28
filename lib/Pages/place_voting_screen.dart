@@ -11,46 +11,35 @@ import '../data/repositories/preference_repository.dart';
 import '../data/services/location_service.dart';
 import '../data/repositories/place_repository.dart';
 
-
-
 class PlaceVotingScreen extends StatefulWidget {
   final String gatheringId;
-  
-  const PlaceVotingScreen({
-    super.key,
-    required this.gatheringId,
-  });
+
+  const PlaceVotingScreen({super.key, required this.gatheringId});
 
   @override
-  State<PlaceVotingScreen> createState() =>
-      _PlaceVotingScreenState();
+  State<PlaceVotingScreen> createState() => _PlaceVotingScreenState();
 }
 
-class _PlaceVotingScreenState
-    extends State<PlaceVotingScreen> {
+class _PlaceVotingScreenState extends State<PlaceVotingScreen> {
   bool isLoading = true;
   String? errorMessage;
 
-  final FirebasePlaceRepository placeRepository =
-    FirebasePlaceRepository();
+  final FirebasePlaceRepository placeRepository = FirebasePlaceRepository();
 
-  final OpenStreetMapRepository searchRepository =
-      OpenStreetMapRepository();
+  final OpenStreetMapRepository searchRepository = OpenStreetMapRepository();
 
-  final VoteRepository voteRepository =
-      VoteRepository();
+  final VoteRepository voteRepository = VoteRepository();
 
   final PreferenceRepository preferenceRepository =
       FirebasePreferenceRepository();
 
-  final LocationService locationService =
-      LocationService();
+  final LocationService locationService = LocationService();
 
   List<Place> places = [];
   String? votedPlaceId;
+  bool _savingPlaceVote = false;
 
-  String? get userId =>
-      FirebaseAuth.instance.currentUser?.uid;
+  String? get userId => FirebaseAuth.instance.currentUser?.uid;
 
   String get gatheringId => widget.gatheringId;
 
@@ -68,13 +57,25 @@ class _PlaceVotingScreenState
         errorMessage = null;
       });
 
+      final access = await FirebaseFirestore.instance
+          .collection('gatherings')
+          .doc(gatheringId)
+          .get();
+      final accessData = access.data();
+      if (accessData == null) throw StateError('Gathering not found.');
+      if (!(List<String>.from(accessData['participantIds'] ?? []))
+          .contains(userId)) {
+        throw StateError('You are no longer participating in this gathering.');
+      }
+      if (accessData['votingEnded'] != true) {
+        throw StateError('Place voting starts after date voting ends.');
+      }
       // First, load places already saved for this gathering.
-      var loadedPlaces =
-          await placeRepository.getPlacesForGathering(gatheringId);
-
-      final hasAppPlaces = loadedPlaces.any(
-        (place) => place.source == 'app',
+      var loadedPlaces = await placeRepository.getPlacesForGathering(
+        gatheringId,
       );
+
+      final hasAppPlaces = loadedPlaces.any((place) => place.source == 'app');
 
       if (!hasAppPlaces) {
         final document = await FirebaseFirestore.instance
@@ -88,26 +89,23 @@ class _PlaceVotingScreenState
           throw Exception('Gathering not found.');
         }
 
-        final participantIds = List<String>.from(
-          data['participantIds'] ?? [],
-        );
+        final participantIds = List<String>.from(data['participantIds'] ?? []);
 
         // Load user-suggested places.
-        final userSuggestedPlaces =
-            await _loadUserSuggestedPlaces(participantIds);
+        final userSuggestedPlaces = await _loadUserSuggestedPlaces(
+          participantIds,
+        );
 
         // Find the group center.
-        final locations = await preferenceRepository
-            .getParticipantLocations(participantIds);
+        final locations = await preferenceRepository.getParticipantLocations(
+          participantIds, gatheringId: gatheringId,
+        );
 
         if (locations.isEmpty) {
-          throw Exception(
-            'No participant locations are available.',
-          );
+          throw Exception('No participant locations are available.');
         }
 
-        final center =
-            locationService.calculateGroupCenter(locations);
+        final center = locationService.calculateGroupCenter(locations);
 
         // Search places recommended by the app.
         List<Place> appPlaces = [];
@@ -132,16 +130,9 @@ class _PlaceVotingScreenState
         }
 
         // Keep user suggestions and add app recommendations.
-        loadedPlaces = [
-          ...loadedPlaces,
-          ...userSuggestedPlaces,
-          ...appPlaces,
-        ];
+        loadedPlaces = [...loadedPlaces, ...userSuggestedPlaces, ...appPlaces];
 
-        await placeRepository.savePlacesForGathering(
-          gatheringId,
-          loadedPlaces,
-        );
+        await placeRepository.savePlacesForGathering(gatheringId, loadedPlaces);
       }
 
       if (!mounted) return;
@@ -165,7 +156,7 @@ class _PlaceVotingScreenState
       });
     }
   }
-  
+
   Future<List<Place>> _loadUserSuggestedPlaces(
     List<String> participantIds,
   ) async {
@@ -173,6 +164,7 @@ class _PlaceVotingScreenState
 
     for (final userId in participantIds) {
       final document = await FirebaseFirestore.instance
+          .collection('gatherings').doc(gatheringId)
           .collection('preferences')
           .doc(userId)
           .get();
@@ -181,9 +173,7 @@ class _PlaceVotingScreenState
 
       if (data == null) continue;
 
-      final locations = List<String>.from(
-        data['suggestedLocations'] ?? [],
-      );
+      final locations = List<String>.from(data['suggestedLocations'] ?? []);
 
       for (var index = 0; index < locations.length; index++) {
         final parts = locations[index].split(',');
@@ -213,6 +203,7 @@ class _PlaceVotingScreenState
   }
 
   Future<void> vote(String placeId) async {
+    if (_savingPlaceVote) return;
     final currentUserId = userId;
 
     if (currentUserId == null) {
@@ -220,12 +211,12 @@ class _PlaceVotingScreenState
       return;
     }
 
-    final isRemovingVote =
-        votedPlaceId == placeId;
+    final previousVoteId = votedPlaceId;
+    final isRemovingVote = votedPlaceId == placeId;
 
     setState(() {
-      votedPlaceId =
-          isRemovingVote ? null : placeId;
+      _savingPlaceVote = true;
+      votedPlaceId = isRemovingVote ? null : placeId;
     });
 
     try {
@@ -245,10 +236,16 @@ class _PlaceVotingScreenState
       }
     } catch (e) {
       debugPrint('Error saving vote: $e');
+      if (!mounted) return;
+      setState(() => votedPlaceId = previousVoteId);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _savingPlaceVote = false);
     }
   }
 
   Future<void> loadUserVote() async {
+    if (_savingPlaceVote) return;
     final currentUserId = userId;
 
     if (currentUserId == null) return;
@@ -258,9 +255,7 @@ class _PlaceVotingScreenState
       targetType: 'place',
     );
 
-    final userVote = votes.where(
-      (vote) => vote.userId == currentUserId,
-    );
+    final userVote = votes.where((vote) => vote.userId == currentUserId);
 
     if (userVote.isNotEmpty && mounted) {
       setState(() {
@@ -283,41 +278,29 @@ class _PlaceVotingScreenState
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Recommended for Group',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium,
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
             Expanded(
               child: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(),
-                  )
-                : errorMessage != null
-                    ? Center(
-                        child: Text(
-                          errorMessage!,
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    : ListView.separated(
-                        itemCount: places.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          return buildPlaceCard(places[index]);
-                        },
-                      ),
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                  ? Center(
+                      child: Text(errorMessage!, textAlign: TextAlign.center),
+                    )
+                  : ListView.separated(
+                      itemCount: places.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        return buildPlaceCard(places[index]);
+                      },
+                    ),
             ),
           ],
         ),
@@ -326,27 +309,20 @@ class _PlaceVotingScreenState
   }
 
   Widget buildPlaceCard(Place place) {
-    final isVoted =
-        votedPlaceId == place.placeId;
+    final isVoted = votedPlaceId == place.placeId;
 
-    final colors =
-        Theme.of(context).colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(
-                backgroundColor:
-                    colors.primaryContainer,
-                child: Icon(
-                  Icons.restaurant,
-                  color: colors.primary,
-                ),
+                backgroundColor: colors.primaryContainer,
+                child: Icon(Icons.restaurant, color: colors.primary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -363,10 +339,7 @@ class _PlaceVotingScreenState
 
           const SizedBox(height: 6),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 5,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: place.source == 'user'
                   ? Colors.orange.shade100
@@ -389,16 +362,11 @@ class _PlaceVotingScreenState
 
           const SizedBox(height: 12),
 
-          _infoRow(
-            Icons.category_outlined,
-            place.category,
-          ),
+          _infoRow(Icons.category_outlined, place.category),
 
           _infoRow(
             Icons.location_on_outlined,
-            place.address.isNotEmpty
-                ? place.address
-                : 'Address unavailable',
+            place.address.isNotEmpty ? place.address : 'Address unavailable',
           ),
 
           _infoRow(
@@ -407,27 +375,20 @@ class _PlaceVotingScreenState
             '${place.longitude.toStringAsFixed(5)}',
           ),
 
-          if (place.cuisine != null &&
-              place.cuisine!.isNotEmpty)
+          if (place.cuisine != null && place.cuisine!.isNotEmpty)
             _infoRow(Icons.restaurant_menu, place.cuisine!),
 
-          if (place.openingHours != null &&
-              place.openingHours!.isNotEmpty)
+          if (place.openingHours != null && place.openingHours!.isNotEmpty)
             _infoRow(Icons.access_time, place.openingHours!),
 
-          if (place.phone != null &&
-              place.phone!.isNotEmpty)
+          if (place.phone != null && place.phone!.isNotEmpty)
             _infoRow(Icons.phone_outlined, place.phone!),
 
-          if (place.website != null &&
-              place.website!.isNotEmpty)
+          if (place.website != null && place.website!.isNotEmpty)
             _infoRow(Icons.language, place.website!),
-          
+
           if (place.outdoorSeating)
-            _infoRow(
-              Icons.deck_outlined,
-              'Outdoor seating available',
-            ),
+            _infoRow(Icons.deck_outlined, 'Outdoor seating available'),
 
           const SizedBox(height: 12),
 
@@ -436,10 +397,8 @@ class _PlaceVotingScreenState
             child: AppButton(
               text: isVoted ? 'Voted' : 'Vote',
               fullWidth: false,
-              backgroundColor: isVoted
-                  ? colors.primary
-                  : colors.secondary,
-              onPressed: () => vote(place.placeId),
+              backgroundColor: isVoted ? colors.primary : colors.secondary,
+              onPressed: _savingPlaceVote ? null : () => vote(place.placeId),
             ),
           ),
         ],
@@ -451,22 +410,12 @@ class _PlaceVotingScreenState
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 18,
-            color: Colors.grey.shade700,
-          ),
+          Icon(icon, size: 18, color: Colors.grey.shade700),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-              ),
-            ),
+            child: Text(text, style: TextStyle(color: Colors.grey.shade700)),
           ),
         ],
       ),

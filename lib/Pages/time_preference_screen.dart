@@ -66,13 +66,14 @@ class _TimePreferenceScreenState
 
   Future<void> _loadSavedPreferences() async {
     final saved =
-        await FirebasePreferenceRepository().getMyPreferences();
+        await FirebasePreferenceRepository().getMyPreferences(gatheringId: widget.gathering.id);
 
     if (!mounted) return;
 
     if (saved != null) {
       final validDates = saved.dates
         .map(_dateOnly)
+        .where((date) => !date.isBefore(firstCalendarDay) && !date.isAfter(lastCalendarDay))
         .toList();
 
       setState(() {
@@ -185,8 +186,8 @@ class _TimePreferenceScreenState
                         selectedDates.remove(existingDate);
                         selectedTimes.remove(existingDate);
                       } else {
-                        selectedDates.add(day);
-                        selectedTimes[day] = 'Afternoon';
+                        selectedDates.add(_dateOnly(day));
+                        selectedTimes[_dateOnly(day)] = 'Afternoon';
                       }
 
                       selectedDay = day;

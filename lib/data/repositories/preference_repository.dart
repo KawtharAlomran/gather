@@ -1,35 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../models/preference_model.dart';
 import '../../models/gathering_model.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 
 abstract class PreferenceRepository {
-  Future<void> savePreferences(
-    PreferenceModel preferences,
-  );
+  Future<void> savePreferences(PreferenceModel preferences, {String? gatheringId});
 
-  Future<List<Map<String, double>>>
-      getParticipantLocations(
-    List<String> participantIds,
+  Future<List<Map<String, double>>> getParticipantLocations(
+    List<String> participantIds, {String? gatheringId}
   );
 }
 
-class FirebasePreferenceRepository
-    implements PreferenceRepository {
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+class FirebasePreferenceRepository implements PreferenceRepository {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-@override
-Future<void> savePreferences(
-  PreferenceModel preferences,
-  ) async {
+  @override
+  Future<void> savePreferences(PreferenceModel preferences, {String? gatheringId}) async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       throw Exception('User is not logged in.');
     }
 
-    final ref = _firestore.collection('preferences').doc(user.uid);
+    final ref = gatheringId == null
+        ? _firestore.collection('preferences').doc(user.uid)
+        : _firestore.collection('gatherings').doc(gatheringId).collection('preferences').doc(user.uid);
     final batch = _firestore.batch();
     batch.set(ref, {
       ...preferences.toJson(),
@@ -46,16 +43,14 @@ Future<void> savePreferences(
     await batch.commit();
   }
 
-  @override
-  Future<PreferenceModel?> getMyPreferences() async {
+  Future<PreferenceModel?> getMyPreferences({String? gatheringId}) async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) return null;
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('preferences')
-        .doc(user.uid)
-        .get();
+    final snapshot = await (gatheringId == null
+        ? _firestore.collection('preferences').doc(user.uid)
+        : _firestore.collection('gatherings').doc(gatheringId).collection('preferences').doc(user.uid)).get();
 
     final data = snapshot.data();
 
@@ -65,17 +60,15 @@ Future<void> savePreferences(
   }
 
   @override
-  Future<List<Map<String, double>>>
-      getParticipantLocations(
-    List<String> participantIds,
+  Future<List<Map<String, double>>> getParticipantLocations(
+    List<String> participantIds, {String? gatheringId}
   ) async {
     final locations = <Map<String, double>>[];
 
     for (final userId in participantIds) {
-      final doc = await _firestore
-          .collection('preferences')
-          .doc(userId)
-          .get();
+      final doc = await (gatheringId == null
+          ? _firestore.collection('preferences').doc(userId)
+          : _firestore.collection('gatherings').doc(gatheringId).collection('preferences').doc(userId)).get();
 
       final data = doc.data();
 
@@ -87,19 +80,21 @@ Future<void> savePreferences(
       }
 
       locations.add({
-        'latitude':
-            (data['latitude'] as num).toDouble(),
-        'longitude':
-            (data['longitude'] as num).toDouble(),
+        'latitude': (data['latitude'] as num).toDouble(),
+        'longitude': (data['longitude'] as num).toDouble(),
       });
     }
 
     return locations;
   }
 }
+
 // Read only the shared date/time projection, never private location data.
 // Legacy options remain readable so existing votes keep their original IDs.
 Future<List<DateOptionModel>> loadDateOptions(GatheringModel gathering) async {
+  if (gathering.votingEnded && gathering.selectedDate != null) {
+    return gathering.dateOptions;
+  }
   final firestore = FirebaseFirestore.instance;
   final uid = FirebaseAuth.instance.currentUser?.uid;
   final options = <String, DateOptionModel>{
@@ -107,12 +102,14 @@ Future<List<DateOptionModel>> loadDateOptions(GatheringModel gathering) async {
   };
   final start = formatGatheringDate(gathering.startDate);
   final end = formatGatheringDate(gathering.endDate);
-  final records = await Future.wait(gathering.participantIds.toSet().map((id) async {
-    final ref = firestore.collection('preferences').doc(id);
-    final shared = await ref.collection('availability').doc('dates').get();
-    // Existing users can read their own old preference until they save again.
-    return shared.data() ?? (id == uid ? (await ref.get()).data() : null);
-  }));
+  final records = await Future.wait(
+    gathering.participantIds.toSet().map((id) async {
+      final ref = firestore.collection('gatherings').doc(gathering.id).collection('preferences').doc(id);
+      final shared = await ref.collection('availability').doc('dates').get();
+      // Existing users can read their own old preference until they save again.
+      return shared.data() ?? (id == uid ? (await ref.get()).data() : null);
+    }),
+  );
   for (final data in records) {
     if (data == null) continue;
     final times = data['times'] as Map? ?? const {};
@@ -123,15 +120,20 @@ Future<List<DateOptionModel>> loadDateOptions(GatheringModel gathering) async {
       final day = formatGatheringDate(date)!;
       if (start != null && day.compareTo(start) < 0) continue;
       if (end != null && day.compareTo(end) > 0) continue;
-      final period = (times[raw] ?? times[date.toIso8601String()] ?? '').toString().trim();
+      final period = normalizeTimePeriod(times[raw] ?? times[DateTime(date.year, date.month, date.day).toIso8601String()]);
+      if (period == null) continue;
       final id = 'date_${day}_${Uri.encodeComponent(period.toLowerCase())}';
-      options.putIfAbsent(id, () => DateOptionModel(
-        id: id,
-        label: period.isEmpty ? day : '$day - $period',
-        // Preferences specify a period, not an exact meeting time.
-        dateTime: DateTime.utc(date.year, date.month, date.day),
-        votes: 0,
-      ));
+      options.putIfAbsent(
+        id,
+        () => DateOptionModel(
+          id: id,
+          label: '$day - $period',
+          storedTimePeriod: period,
+          // Preferences specify a period, not an exact meeting time.
+          dateTime: DateTime.utc(date.year, date.month, date.day),
+          votes: 0,
+        ),
+      );
     }
   }
   return options.values.toList()..sort((a, b) {

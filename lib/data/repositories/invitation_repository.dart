@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -21,8 +20,8 @@ class FirestoreInvitationRepository implements InvitationRepository {
   FirestoreInvitationRepository({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance;
 
   // Firestore invitations collection.
   CollectionReference<Map<String, dynamic>> get _invitations =>
@@ -53,32 +52,21 @@ class FirestoreInvitationRepository implements InvitationRepository {
         .get();
 
     return snapshot.docs
-        .map(
-          (doc) => InvitationModel.fromFirestore(doc),
-        )
+        .map((doc) => InvitationModel.fromFirestore(doc))
+        .where((invitation) => invitation.status != InvitationStatus.excluded)
         .toList();
   }
 
   // Accept an invitation and join its gathering.
   @override
-  Future<InvitationModel> acceptInvitation(
-    String invitationId,
-  ) async {
-    return _updateStatus(
-      invitationId,
-      InvitationStatus.accepted,
-    );
+  Future<InvitationModel> acceptInvitation(String invitationId) async {
+    return _updateStatus(invitationId, InvitationStatus.accepted);
   }
 
   // Decline an invitation without joining the gathering.
   @override
-  Future<InvitationModel> declineInvitation(
-    String invitationId,
-  ) async {
-    return _updateStatus(
-      invitationId,
-      InvitationStatus.declined,
-    );
+  Future<InvitationModel> declineInvitation(String invitationId) async {
+    return _updateStatus(invitationId, InvitationStatus.declined);
   }
 
   // Update an invitation using a Firestore transaction.
@@ -91,28 +79,22 @@ class FirestoreInvitationRepository implements InvitationRepository {
 
     return _firestore.runTransaction((transaction) async {
       // Read the invitation document.
-      final invitationSnapshot =
-          await transaction.get(invitationRef);
+      final invitationSnapshot = await transaction.get(invitationRef);
 
       if (!invitationSnapshot.exists) {
         throw StateError('Invitation not found.');
       }
 
-      final invitation =
-          InvitationModel.fromFirestore(invitationSnapshot);
+      final invitation = InvitationModel.fromFirestore(invitationSnapshot);
 
       // Only the invitation recipient can respond.
       if (invitation.inviteeId != userId) {
-        throw StateError(
-          'You are not authorized to update this invitation.',
-        );
+        throw StateError('You are not authorized to update this invitation.');
       }
 
       // Only pending invitations can be accepted or declined.
       if (invitation.status != InvitationStatus.pending) {
-        throw StateError(
-          'Invitation has already been responded to.',
-        );
+        throw StateError('Invitation has already been responded to.');
       }
 
       // Read the gathering before performing any writes.
@@ -121,18 +103,18 @@ class FirestoreInvitationRepository implements InvitationRepository {
       if (newStatus == InvitationStatus.accepted) {
         gatheringRef = _gatherings.doc(invitation.gatheringId);
 
-        final gatheringSnapshot =
-            await transaction.get(gatheringRef);
+        final gatheringSnapshot = await transaction.get(gatheringRef);
 
         if (!gatheringSnapshot.exists) {
           throw StateError('Gathering not found.');
         }
+        if (gatheringSnapshot.data()?['votingEnded'] == true) {
+          throw StateError('Date voting has ended. This invitation is closed.');
+        }
       }
 
       // Update the invitation status.
-      transaction.update(invitationRef, {
-        'status': newStatus.name,
-      });
+      transaction.update(invitationRef, {'status': newStatus.name});
 
       // Add the user to the gathering when accepted.
       if (newStatus == InvitationStatus.accepted) {
@@ -142,9 +124,7 @@ class FirestoreInvitationRepository implements InvitationRepository {
       }
 
       // Return the updated invitation model.
-      return invitation.copyWith(
-        status: newStatus,
-      );
+      return invitation.copyWith(status: newStatus);
     });
   }
 }
@@ -176,7 +156,6 @@ class FirestoreInvitationRepository implements InvitationRepository {
 // - Firestore transactions update related documents atomically.
 // - arrayUnion prevents duplicate participant IDs.
 // - Firestore Security Rules must authorize these operations.
-
 
 // Example usage:
 //
